@@ -1,12 +1,12 @@
 import { Keypair, PublicKey } from "@solana/web3.js";
 import { findStableMint } from "@/lib/config/mints";
-import type { Invoice } from "@/lib/db/types";
+import type { Contact, Invoice } from "@/lib/db/types";
 import { badRequest, notFound } from "@/lib/errors";
 import { NETWORK_ID } from "@/lib/mode";
 import { formatTokenAmount, formatUnits, parseUnits } from "@/lib/money/units";
 import { hashDocument } from "@/lib/receipts/canonical";
 import type { Deps } from "@/lib/services/deps";
-import { applyFx } from "@/lib/services/receipts";
+import { DEFAULT_CATEGORY, applyFx } from "@/lib/services/receipts";
 import { invoiceMemo } from "@/lib/solana/memo";
 import { extractIncomingTransfer, extractMemos, type IncomingTransfer } from "@/lib/solana/parse";
 import { buildSolanaPayUrl } from "@/lib/solana/pay";
@@ -178,13 +178,21 @@ export async function getInvoiceView(deps: Deps, id: string): Promise<InvoiceVie
 async function settleInvoice(deps: Deps, invoice: Invoice, transfer: IncomingTransfer): Promise<void> {
   const owner = invoice.owner_wallet;
   const profile = await deps.store.ensureProfile(owner);
-  const contact = transfer.payerWallet
-    ? await deps.store.upsertContact(owner, {
+  // If the user has already named this payer, their name for it wins: an
+  // invoice must not rename an existing contact.
+  let contact: Contact | null = null;
+  if (transfer.payerWallet) {
+    const known = (await deps.store.listContacts(owner)).find(
+      (entry) => entry.wallet === transfer.payerWallet,
+    );
+    contact =
+      known ??
+      (await deps.store.upsertContact(owner, {
         wallet: transfer.payerWallet,
         name: invoice.client_name,
         kind: "client",
-      })
-    : null;
+      }));
+  }
   const blockTime = new Date((transfer.blockTime ?? Math.floor(deps.now().getTime() / 1000)) * 1000);
 
   const [inserted] = await deps.store.insertReceipts([
@@ -234,6 +242,23 @@ async function settleInvoice(deps: Deps, invoice: Invoice, transfer: IncomingTra
       await applyFx(deps, receipt, profile.fx_rule);
     } catch (error) {
       console.warn(`[fx] could not value receipt ${receipt.id}:`, error);
+    }
+  }
+
+  // The payer is a known contact now: recognise their earlier payments too,
+  // the same way a wallet import recognises a known payer.
+  if (contact) {
+    const { id: contactId, wallet: payerWallet, kind } = contact;
+    const earlier = (await deps.store.listReceipts(owner)).filter(
+      (row) => row.payer_wallet === payerWallet && !row.contact_id && !row.seal_signature,
+    );
+    for (const row of earlier) {
+      await deps.store.updateReceipt(row.id, {
+        contact_id: contactId,
+        category: row.category ?? DEFAULT_CATEGORY[kind],
+        receipt_json: null,
+        receipt_hash: null,
+      });
     }
   }
   await deps.store.markInvoicePaid(invoice.id, transfer.signature, blockTime.toISOString());

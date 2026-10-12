@@ -262,6 +262,48 @@ describe("mock mode, end to end", () => {
     expect(result.checks.at(-1)).toMatchObject({ id: "invoice", ok: true });
   });
 
+  it("a paid invoice makes the payer a contact for their earlier payments too", async () => {
+    await importReceipts(deps, ANA);
+    const invoice = await createInvoice(deps, ANA, {
+      client_name: "Acme Labs",
+      description: "October retainer",
+      amount: "100",
+      mint: MOCK_USDC.mint,
+    });
+    mockPay({ payer: MOCK_KEYS.clientAcme, recipient: ANA, amount: "100", memo: invoice.memo, reference: invoice.reference });
+    await checkInvoicePayment(deps, invoice.id);
+
+    // The 1,200 payment imported earlier came from the same wallet.
+    const earlier = (await listReceiptViews(deps, ANA)).find((r) => r.amount === "1,200.00")!;
+    expect(earlier.contact?.name).toBe("Acme Labs");
+    expect(earlier.category).toBe("service");
+    // Payments from other wallets are left alone.
+    const bounty = (await listReceiptViews(deps, ANA)).find((r) => r.amount === "500.00")!;
+    expect(bounty.contact).toBeNull();
+    expect(bounty.category).toBeNull();
+  });
+
+  it("an invoice does not rename a contact the user already named", async () => {
+    await importReceipts(deps, ANA);
+    const acme = (await listReceiptViews(deps, ANA)).find((r) => r.amount === "1,200.00")!;
+    await classifyReceipt(deps, ANA, acme.id, {
+      category: "service",
+      description: null,
+      contact: { name: "Acme Labs", kind: "client" },
+    });
+    const invoice = await createInvoice(deps, ANA, {
+      client_name: "ACME Laboratories Inc.",
+      description: "October retainer",
+      amount: "100",
+      mint: MOCK_USDC.mint,
+    });
+    const signature = mockPay({ payer: MOCK_KEYS.clientAcme, recipient: ANA, amount: "100", memo: invoice.memo, reference: invoice.reference });
+    await checkInvoicePayment(deps, invoice.id);
+
+    const paid = (await listReceiptViews(deps, ANA)).find((r) => r.tx_signature === signature)!;
+    expect(paid.contact?.name).toBe("Acme Labs");
+  });
+
   it("builds the monthly report and the CSV", async () => {
     await importReceipts(deps, ANA);
     await sealFirst(deps, (memo) => memo?.startsWith("Acme") ?? false);
