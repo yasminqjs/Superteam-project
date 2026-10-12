@@ -154,9 +154,11 @@ async function main() {
     fs.writeFileSync(marker, JSON.stringify({ at: new Date().toISOString() }));
   }
 
+  // The test token comes first, so it is the default in the invoice and
+  // cash-out forms: it is the one the demo wallets actually hold.
   const mints = [
-    { mint: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", symbol: "USDC", decimals: 6, label: "USDC (devnet)" },
     { mint: mint.publicKey.toBase58(), symbol: "TUSD", decimals: DECIMALS, label: "Test USD (devnet)" },
+    { mint: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", symbol: "USDC", decimals: 6, label: "USDC (devnet)" },
   ];
   console.log(`
 Done. Demo wallets (devnet):

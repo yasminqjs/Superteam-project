@@ -1,7 +1,7 @@
 "use client";
 
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { Transaction } from "@solana/web3.js";
+import { PublicKey, Transaction } from "@solana/web3.js";
 import { useParams } from "next/navigation";
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
@@ -11,6 +11,7 @@ import { useConnectWallet } from "@/components/wallet/account-control";
 import { api, errorMessage } from "@/lib/api-client";
 import { shortAddress } from "@/lib/format";
 import { IS_MOCK } from "@/lib/mode";
+import { formatTokenAmount } from "@/lib/money/units";
 import type { InvoiceView } from "@/lib/services/invoices";
 import { buildPaymentInstructions } from "@/lib/solana/pay";
 import { signAndSend } from "@/lib/solana/send";
@@ -66,10 +67,28 @@ export default function PayPage() {
   }, [payUrl]);
 
   async function payWithWallet() {
-    if (!invoice || !publicKey || !signTransaction) return;
+    if (!invoice || !publicKey) return;
     setPaying("wallet");
     setPayError(null);
     try {
+      if (!signTransaction) throw new Error("This wallet cannot sign transactions. Try Phantom.");
+
+      // Check the balance first: "you hold 0.00 USDC" is something a person
+      // can act on; the node's "custom program error: 0x1" is not.
+      const { value: accounts } = await connection.getParsedTokenAccountsByOwner(publicKey, {
+        mint: new PublicKey(invoice.mint),
+      });
+      const balance = accounts.reduce(
+        (sum, { account }) => sum + BigInt(account.data.parsed.info.tokenAmount.amount),
+        0n,
+      );
+      if (balance < BigInt(invoice.amount_raw)) {
+        throw new Error(
+          `This wallet holds ${formatTokenAmount(balance, invoice.decimals)} ${invoice.symbol}, ` +
+            `and the invoice is for ${invoice.amount} ${invoice.symbol}. Switch to a wallet with enough.`,
+        );
+      }
+
       const instructions = buildPaymentInstructions({
         payer: publicKey.toBase58(),
         recipient: invoice.issuer_wallet,
@@ -169,6 +188,12 @@ export default function PayPage() {
                     <Button className="w-full" onClick={simulateClientPayment} busy={paying === "mock"}>
                       Simulate the client paying
                     </Button>
+                  ) : publicKey?.toBase58() === invoice.issuer_wallet ? (
+                    // Paying yourself moves nothing, so the invoice would never be detected as paid.
+                    <Notice tone="neutral">
+                      The connected wallet is the one that issued this invoice. Switch to the
+                      client&apos;s wallet to pay it.
+                    </Notice>
                   ) : publicKey ? (
                     <Button className="w-full" onClick={payWithWallet} busy={paying === "wallet"}>
                       Pay with browser wallet
