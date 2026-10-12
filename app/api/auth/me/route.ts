@@ -1,11 +1,13 @@
+import { currentActor } from "@/lib/auth/account";
 import { getSessionWallet } from "@/lib/auth/session";
 import { route } from "@/lib/http";
 import { getDeps } from "@/lib/services/deps";
+import { describeSession } from "@/lib/services/session";
 
-/** Who is signed in, if anyone. */
+/** Who is signed in, if anyone, and which account they are acting on. */
 export const GET = route(async () => {
-  const wallet = await getSessionWallet();
-  if (!wallet) return { wallet: null, fx_rule: null };
-  const profile = await getDeps().store.ensureProfile(wallet);
-  return { wallet, fx_rule: profile.fx_rule };
+  if (!(await getSessionWallet())) return { wallet: null };
+  const deps = getDeps();
+  const actor = await currentActor(deps.store);
+  return actor ? describeSession(deps, actor) : { wallet: null };
 });

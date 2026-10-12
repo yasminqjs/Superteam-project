@@ -149,6 +149,57 @@ printed with an added hyphen.
 (`PAYOUT_SPREAD_BPS`), truncated to centavos: a quote must not promise more
 than would arrive. It is simulated; see `lib/services/payouts.ts`.
 
+## Company accounts
+
+**A company is an account, not a new kind of thing.** Every row already
+belonged to a wallet (`owner_wallet`), and the receiving wallet is what the
+chain and the receipts talk about. So a company account is that same wallet's
+account plus a row in `organizations` (name, tax ID) and rows in
+`organization_members`. No table changed, no data moved, and a freelancer who
+later hires an accountant keeps every receipt they already sealed.
+
+**Members are wallets, and the owner is the account's own wallet.** Adding a
+person means typing their address and a role. Nobody receives an invitation
+e-mail and nobody shares a key. The price is that an accountant needs a wallet
+to sign in; e-mail sign-in is on the roadmap.
+
+**Three roles, one table.** `lib/team.ts` says what Owner, Finance and
+Read-only may do. Pages read it to hide what a role cannot use; every private
+route calls `requireActor(store, permission)`, which is where it is enforced.
+
+**Sealing and cashing out belong to the owner and cannot be delegated.** A seal
+is checked by anyone against the recipient's signature, so only the receiving
+wallet can make one; giving Finance a "seal" button would produce seals that
+fail verification. Cash-out moves the company's money, so it follows the same
+rule. Finance can prepare the quote.
+
+**The selected account is a cookie, and the cookie is only a wish.** It holds
+the address of the account the signer wants to act on. Each request looks the
+membership up again, so removing a member takes effect on their next click. If
+the membership is gone the request fails with a 403: it never falls back to the
+signer's own account, because a write meant for the company must not land
+somewhere else. Only `/api/auth/me` falls back, and it clears the cookie.
+
+**The audit trail stores the actor's name at the time.** Reading it later from
+the team table would turn a removed member into an address. Writing the trail
+is best-effort: the action it describes has already happened, so a failure to
+record it is logged and does not undo the action.
+
+**Company identity goes into the invoice, not into the receipt.** A company's
+invoices carry `issuer_name` and `issuer_tax_id` inside the hashed document, so
+the payer's own transaction commits to them. Personal invoices omit both fields
+and hash exactly as before. The receipt format (`recebi.receipt` v1) did not
+change: anything sealed earlier still verifies.
+
+**The new tables are optional at runtime.** A database created before them
+keeps running everything else; the team page says to run `supabase/schema.sql`
+again, and the schema ends with `notify pgrst, 'reload schema'` so the API sees
+the tables at once.
+
+**Mock mode can be three people.** The demo wallet can switch between Ana (the
+company wallet), Bia (Finance) and Caio (Read-only) from the mock banner, so
+one browser can show a company from all three sides.
+
 ## Dependencies
 
 **Known `npm audit` findings, left as they are.** All of them come from

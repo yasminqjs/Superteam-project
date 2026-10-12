@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { api } from "@/lib/api-client";
+import { MOCK_IDENTITIES, currentMockIdentity, setMockIdentity } from "@/lib/mock/identity";
 import { IS_MOCK } from "@/lib/mode";
+
+// The identity only changes through switchIdentity, which reloads the page.
+const subscribeToNothing = () => () => {};
 
 /**
  * Always visible in mock mode, on every page. Nobody looking at the screen
@@ -10,7 +14,22 @@ import { IS_MOCK } from "@/lib/mode";
  */
 export function MockBanner() {
   const [resetting, setResetting] = useState(false);
+  // The choice lives in localStorage, which the server cannot see: it renders
+  // the default person and the browser corrects it on hydration.
+  const identity = useSyncExternalStore(
+    subscribeToNothing,
+    () => currentMockIdentity().id,
+    () => MOCK_IDENTITIES[0].id,
+  );
   if (!IS_MOCK) return null;
+
+  /** Becomes another demo person: a different wallet, so a different sign-in. */
+  async function switchIdentity(id: string) {
+    setMockIdentity(id);
+    await api("/api/auth/logout", { method: "POST" }).catch(() => {});
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.assign("/app");
+  }
 
   async function reset() {
     setResetting(true);
@@ -35,6 +54,21 @@ export function MockBanner() {
             · simulated ledger, demo wallet and sample exchange rates. Nothing here is onchain.
           </span>
         </p>
+        <label className="flex items-center gap-2">
+          <span className="text-paper/70">Demo wallet</span>
+          <select
+            aria-label="Demo wallet"
+            value={identity}
+            onChange={(event) => switchIdentity(event.target.value)}
+            className="rounded border border-paper/30 bg-ink px-1.5 py-0.5 text-paper"
+          >
+            {MOCK_IDENTITIES.map((person) => (
+              <option key={person.id} value={person.id}>
+                {person.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <button
           type="button"
           onClick={reset}

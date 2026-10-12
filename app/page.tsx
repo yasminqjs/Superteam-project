@@ -4,16 +4,16 @@ import { AccountControl } from "@/components/wallet/account-control";
 
 const STEPS = [
   {
-    title: "Import",
-    body: "Recebi reads your wallet's onchain history and lists every incoming stablecoin payment, with date, amount, payer and memo.",
+    title: "Invoice",
+    body: "Send your client a payment link. They pay in stablecoins on Solana, and the hash of the invoice travels inside their own transaction.",
   },
   {
-    title: "Seal",
-    body: "Classify each payment, value it in BRL at the Central Bank's PTAX rate, and seal the receipt's hash on Solana with one signature.",
+    title: "Document",
+    body: "Every payment is tied to its invoice, valued in BRL at the Central Bank's PTAX rate and sealed onchain. Earlier payments are imported from the wallet's history.",
   },
   {
-    title: "Verify",
-    body: "Your accountant or exchange opens a public link and checks the receipt against the chain. Nobody has to trust Recebi.",
+    title: "Share",
+    body: "Your team works on one company account, each person with their own wallet and role. Your accountant or exchange checks any receipt on a public page, without trusting Recebi.",
   },
 ];
 
@@ -26,12 +26,12 @@ export default function Home() {
       <main className="mx-auto w-full max-w-5xl flex-1 px-5 sm:px-8">
         <section className="pb-14 pt-16 sm:pb-20 sm:pt-24">
           <h1 className="max-w-3xl font-display text-5xl leading-[1.05] tracking-tight sm:text-7xl">
-            Proof of income for Brazilians paid in stablecoins.
+            Invoice abroad. Get paid in stablecoins. Prove every payment.
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-muted">
-            Connect a Solana wallet and every incoming stablecoin payment becomes an
-            accountant-ready record: classified, valued in BRL at the Central Bank&apos;s official
-            PTAX rate, and backed by a receipt anyone can verify onchain.
+            Recebi is the receivables back office for Brazilian companies and freelancers who sell
+            services abroad. Each payment arrives tied to its invoice, valued in BRL at the Central
+            Bank&apos;s official PTAX rate, and backed by a receipt anyone can verify onchain.
           </p>
           <div className="mt-10">
             <LandingCta />

@@ -21,6 +21,8 @@ import { IS_MOCK, NETWORK_ID } from "@/lib/mode";
  * scripts cannot read them.
  */
 const SESSION_COOKIE = "recebi_session";
+/** Which account the signed-in wallet is acting on. See lib/auth/account.ts. */
+export const ACCOUNT_COOKIE = "recebi_account";
 const CHALLENGE_COOKIE = "recebi_challenge";
 const SESSION_DAYS = 7;
 const CHALLENGE_MINUTES = 5;
@@ -33,7 +35,7 @@ function secret(): Uint8Array {
   throw new ConfigError("SESSION_SECRET is missing or shorter than 32 characters. Set it in .env.local.");
 }
 
-const cookieOptions = (maxAgeSeconds: number) => ({
+export const cookieOptions = (maxAgeSeconds: number) => ({
   httpOnly: true,
   sameSite: "lax" as const,
   secure: process.env.NODE_ENV === "production",
@@ -105,11 +107,15 @@ export async function verifyChallenge(wallet: string, signatureBase58: string): 
     .sign(secret());
   jar.set(SESSION_COOKIE, session, cookieOptions(SESSION_DAYS * 24 * 60 * 60));
   jar.delete(CHALLENGE_COOKIE);
+  // A new sign-in always starts on the wallet's own account.
+  jar.delete(ACCOUNT_COOKIE);
   return wallet;
 }
 
 export async function clearSession(): Promise<void> {
-  (await cookies()).delete(SESSION_COOKIE);
+  const jar = await cookies();
+  jar.delete(SESSION_COOKIE);
+  jar.delete(ACCOUNT_COOKIE);
 }
 
 /** The signed-in wallet, or null. */

@@ -83,6 +83,32 @@ Espere aparecer `Ready` e abra **http://localhost:3000**. Se o terminal mostrar 
 11. **Cash out**: digite um valor e uma chave Pix, **Get quote**, **Simulate payout**.
     É simulado: nenhum token se move.
 
+### Roteiro da conta de empresa
+
+A conta de empresa é a mesma conta, com nome, CNPJ e equipe. Cada pessoa entra com a própria
+carteira e recebe um papel. Ninguém compartilha chave.
+
+12. **Team**. Preencha **Company name** (e o **Tax ID**, se quiser) e clique em
+    **Create company account**. Aparece uma faixa no topo: "Company account ... your role: Owner".
+13. Em **Add a member**, clique em **Bia (finance)** (o modo mock preenche o endereço) e depois
+    em **Add member**. Repita com **Caio (accountant)**.
+14. Crie uma invoice nova e abra a **Payment page**: o nome e o CNPJ da empresa aparecem em
+    "Pay to". Eles fazem parte do documento que o cliente assina ao pagar.
+15. Na faixa preta do topo, troque **Demo wallet** para **Bia (finance)** e clique em
+    **Sign in**. A Bia começa na conta dela, vazia. Em **Switch account**, escolha a empresa.
+    Ela vê os pagamentos, classifica e cria invoices, mas o botão **Seal onchain** fica
+    desabilitado: o selo só vale se for assinado pela carteira que recebeu.
+16. Troque para **Caio (accountant)**, entre e escolha a empresa. Ele só lê: não há botão de
+    importar nem de criar invoice, mas os relatórios e PDFs funcionam.
+17. Volte para **Ana (company wallet)** e abra **Team**: a seção **Activity** mostra quem fez o
+    quê, pelo nome.
+
+| Papel | Quem é | O que pode |
+|---|---|---|
+| Owner | A própria carteira da empresa | Tudo: selar, sacar e gerenciar a equipe |
+| Finance | Colegas | Importar, classificar, criar invoices, preparar relatórios e cotações |
+| Read-only | Contador, auditor | Ver e baixar pagamentos, invoices e relatórios |
+
 Para recomeçar do zero, clique em **Reset demo data** na faixa preta do topo.
 
 ## 4. Modo live: Solana devnet de verdade
@@ -94,6 +120,9 @@ Faça uma vez, na ordem. Leva uns 20 a 30 minutos.
 1. Crie uma conta e um projeto gratuito em https://supabase.com.
 2. No painel do projeto, abra **SQL Editor**, cole todo o conteúdo de
    [`supabase/schema.sql`](supabase/schema.sql) e clique em **Run**.
+   **Se você já tinha feito isso antes de 12/10/2026, faça de novo.** O arquivo ganhou três
+   tabelas para a conta de empresa (`organizations`, `organization_members`, `activity`).
+   Rodar duas vezes é seguro: ele só cria o que falta e não apaga nada.
 3. Em **Project Settings > API** (em projetos novos, **API Keys**), copie a **Project URL** e a
    chave **service_role** (pode aparecer como "secret key"). Essa chave dá acesso total ao
    banco: nunca a coloque no chat, em print ou no GitHub.
@@ -214,6 +243,18 @@ As diferenças no modo live:
   precisa estar em Testnet Mode com Solana Devnet e com a chave da `client-acme` importada.
 - Abra a página `/verify/...` em uma **janela anônima** para mostrar que ela funciona sem login.
 
+### 4.8 Conta de empresa no modo live
+
+1. Rode o `supabase/schema.sql` de novo (seção 4.1) e confira com
+   `npm.cmd run check:supabase`: a linha "the 3 company-account tables exist" precisa dar `ok`.
+2. Entre com a carteira da `ana`, abra **Team** e crie a empresa.
+3. Para ter um segundo usuário, crie outra conta na própria Phantom (**Add / Connect Wallet >
+   Create New Account**), copie o endereço dela e adicione em **Add a member**.
+4. Troque para essa conta na Phantom. O Recebi encerra a sessão anterior sozinho; clique em
+   **Sign in** e escolha a empresa em **Switch account**.
+
+Membros não precisam de SOL nem de tokens: eles só assinam a mensagem de login.
+
 ## 5. Trocar de modo
 
 - `npm.cmd run dev:mock` e `npm.cmd run dev:live` escolhem o modo na hora, ignorando o arquivo.
@@ -253,17 +294,23 @@ As diferenças no modo live:
 | A Phantom não mostra os tokens ou a transação falha | A Phantom não está em Testnet Mode com Solana Devnet |
 | O airdrop do `seed:demo` falhou | Use https://faucet.solana.com com o endereço que o script mostrou e rode de novo |
 | `No BRL value yet` | A cotação não pôde ser lida. Abra o recebimento e clique em **Refresh rate** |
-| **Seal onchain** está desabilitado | Classifique o pagamento e clique em **Save** antes |
+| **Seal onchain** está desabilitado | Classifique o pagamento e clique em **Save** antes. Se aparecer "Only the company's own wallet can seal", você entrou como membro: só a carteira da empresa sela |
+| `Company accounts need a database update` | O banco foi criado antes da conta de empresa. Rode o `supabase/schema.sql` de novo (seção 4.1) |
+| `You no longer have access to that company account` | Você foi removido da equipe. Recarregue a página: você volta para a sua própria conta |
+| Entrei e não vejo os pagamentos da empresa | Você está na sua conta pessoal. Escolha a empresa em **Switch account**, na faixa abaixo do cabeçalho |
 | Mudei o `.env.local` e nada mudou | Reinicie o servidor |
 | O CSV abre em uma coluna só no Excel | O Excel em português espera ponto e vírgula. Use **Dados > De Texto/CSV**, ou abra no Google Planilhas |
 
 ## 8. O que já foi testado e o que não foi
 
-Situação em 11/10/2026.
+Situação em 12/10/2026.
 
 Testado:
 
-- os 71 testes automáticos;
+- os 89 testes automáticos;
+- **a conta de empresa no modo mock**: papéis e histórico nos testes automáticos, as recusas
+  de cada papel pela API (`smoke:mock`) e o fluxo com Ana, Bia e Caio em um navegador de
+  verdade;
 - o fluxo inteiro do modo mock em um navegador de verdade, em desenvolvimento e no build de
   produção;
 - a PTAX real do Banco Central e a importação de uma carteira real da devnet;
@@ -274,9 +321,13 @@ Testado:
 - **o app inteiro em modo live pela API** (`e2e:live`, 21 checagens): Supabase, PTAX e devnet
   juntos, do login por assinatura ao PDF de proof of origin.
 
-**Ainda não testado:** a Phantom. Todos os testes acima assinam com as chaves de demonstração
-direto do script; ninguém ainda clicou em "Seal onchain" ou "Pay with browser wallet" com a
-extensão. É o que falta conferir à mão antes de gravar.
+- **a Phantom, à mão, em 11/10/2026**: login, importação, classificação, selo de dois
+  recebimentos, invoice paga com "Pay with browser wallet" e saque simulado.
+
+**Ainda não testado:** a conta de empresa no modo live. As três tabelas novas ainda não
+existem no Supabase do time (o `check:supabase` avisa), então criar a empresa, adicionar um
+membro e trocar de conta com a Phantom é o que falta conferir à mão antes de gravar. O passo a
+passo está na seção 4.8.
 
 Se algo falhar no modo live com a Phantom, rode `npm.cmd run e2e:live`. Se ele passar, banco,
 Solana e PTAX estão certos e o problema está na carteira (rede errada, conta errada, sem SOL).

@@ -97,13 +97,34 @@ function Footer({ text }: { text: string }) {
   );
 }
 
-function SummaryDocument({ report, wallet }: { report: MonthlyReport; wallet: string }) {
+/** The company behind the account, when there is one. Declared by the company, not verified. */
+export type PdfCompany = { name: string; tax_id: string | null } | null;
+
+function companyLines(company: PdfCompany): string[] {
+  if (!company) return [];
+  return [company.tax_id ? `Company: ${company.name}   |   Tax ID: ${company.tax_id}` : `Company: ${company.name}`];
+}
+
+function SummaryDocument({
+  report,
+  wallet,
+  company,
+}: {
+  report: MonthlyReport;
+  wallet: string;
+  company: PdfCompany;
+}) {
   return (
     <Document title={`Recebi summary ${report.month}`} author="Recebi">
       <Page size="A4" style={styles.page}>
         <Header
           title={`Monthly summary, ${report.month}`}
-          lines={[`Wallet: ${wallet}`, `Network: ${NETWORK_LABEL}`, "Dates in Brasilia time (BRT)."]}
+          lines={[
+            ...companyLines(company),
+            `Wallet: ${wallet}`,
+            `Network: ${NETWORK_LABEL}`,
+            "Dates in Brasilia time (BRT).",
+          ]}
         />
 
         <Text style={styles.heading}>Totals by category</Text>
@@ -248,8 +269,12 @@ function DossierBlock({ receipt, qr, appUrl }: { receipt: ReceiptView; qr: strin
   );
 }
 
-export async function renderSummaryPdf(report: MonthlyReport, wallet: string): Promise<Buffer> {
-  return renderToBuffer(<SummaryDocument report={report} wallet={wallet} />);
+export async function renderSummaryPdf(
+  report: MonthlyReport,
+  wallet: string,
+  company: PdfCompany = null,
+): Promise<Buffer> {
+  return renderToBuffer(<SummaryDocument report={report} wallet={wallet} company={company} />);
 }
 
 /**
@@ -260,6 +285,7 @@ export async function renderDossierPdf(
   receipts: ReceiptView[],
   wallet: string,
   appUrl: string,
+  company: PdfCompany = null,
 ): Promise<Buffer> {
   const qrCodes = await Promise.all(
     receipts.map((receipt) =>
@@ -274,6 +300,7 @@ export async function renderDossierPdf(
         <Header
           title="Proof of origin"
           lines={[
+            ...companyLines(company),
             `Recipient wallet: ${wallet}`,
             `Network: ${NETWORK_LABEL}`,
             "Each sealed receipt below can be checked by anyone, without trusting Recebi:",

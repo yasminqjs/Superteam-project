@@ -23,9 +23,9 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Recebi: proof of income for Brazilians paid in stablecoins",
+  title: "Recebi: stablecoin receivables for Brazilian companies, with proof",
   description:
-    "Connect a Solana wallet and every incoming stablecoin payment becomes an accountant-ready record: classified, valued in BRL at the Central Bank's official PTAX rate, and backed by a receipt anyone can verify onchain.",
+    "The receivables back office for Brazilian companies and freelancers who sell services abroad. Each stablecoin payment arrives tied to its invoice, valued in BRL at the Central Bank's official PTAX rate, and backed by a receipt anyone can verify onchain.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

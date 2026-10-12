@@ -12,6 +12,8 @@ import type { NewReceipt, Store } from "../lib/db/types";
 import { loadEnv } from "./lib/devnet";
 
 const TABLES = ["profiles", "contacts", "receipts", "invoices", "fx_rates", "payouts"];
+// Added later, for company accounts. A database set up before them still runs the rest of the app.
+const TEAM_TABLES = ["organizations", "organization_members", "activity"];
 /** A date no real payment will ever have, so the test exchange rate is easy to remove. */
 const SENTINEL_DATE = "1990-01-02";
 
@@ -164,6 +166,34 @@ async function runStoreChecks(store: Store, owner: string) {
   check("a simulated payout is recorded", payout.amount_brl === "4963.72" && (await store.listPayouts(owner)).length === 1);
 }
 
+async function runTeamChecks(store: Store, owner: string) {
+  const member = `${owner}-member`;
+  const company = await store.saveOrganization(owner, { name: "Check Ltda", tax_id: null });
+  check("a company account is created for the wallet", company.wallet === owner && company.name === "Check Ltda");
+  const renamed = await store.saveOrganization(owner, { name: "Check Software Ltda", tax_id: "00.000.000/0001-00" });
+  check(
+    "saving it again updates it instead of duplicating",
+    renamed.tax_id === "00.000.000/0001-00" && (await store.listOrganizations([owner, member])).length === 1,
+  );
+
+  await store.saveMember({ org_wallet: owner, member_wallet: member, name: "Bia", role: "finance", added_by: owner });
+  const changed = await store.saveMember({ org_wallet: owner, member_wallet: member, name: "Bia", role: "viewer", added_by: owner });
+  check("a member is added and their role can be changed", changed.role === "viewer" && (await store.listMembers(owner)).length === 1);
+  check(
+    "membership is found from both sides",
+    (await store.getMember(owner, member))?.name === "Bia" && (await store.listMemberships(member))[0]?.org_wallet === owner,
+  );
+  check("a wallet outside the team has no membership", (await store.getMember(owner, `${owner}-stranger`)) === null);
+
+  await store.insertActivity({ account_wallet: owner, actor_wallet: member, actor_name: "Bia", action: "invoice.created", detail: "INV-0001" });
+  await store.insertActivity({ account_wallet: owner, actor_wallet: owner, actor_name: "Check (owner)", action: "receipt.sealed", detail: null });
+  const trail = await store.listActivity(owner, 10);
+  check("the audit trail is kept, newest first", trail.length === 2 && trail[0]?.action === "receipt.sealed" && trail[1]?.actor_name === "Bia");
+
+  await store.removeMember(owner, member);
+  check("a removed member is gone", (await store.getMember(owner, member)) === null);
+}
+
 async function main() {
   loadEnv();
   const owner = `recebi-check-${randomUUID()}`;
@@ -173,6 +203,7 @@ async function main() {
     const { FileStore } = await import("../lib/db/file-store");
     console.log("Dry run: checking the checks against the in-memory store. Supabase is not contacted.\n");
     await runStoreChecks(new FileStore(), owner);
+    await runTeamChecks(new FileStore(), owner);
     return;
   }
 
@@ -200,7 +231,9 @@ async function main() {
   // 1. Can we connect, and has the schema been run?
   const missing: string[] = [];
   for (const table of TABLES) {
-    const { error } = await client.from(table).select("*", { count: "exact", head: true });
+    // A real read, not a HEAD request: a HEAD for a table that does not exist
+    // comes back without an error body, and so looks fine.
+    const { error } = await client.from(table).select("*").limit(1);
     if (error) {
       if (/fetch failed|ENOTFOUND|getaddrinfo/i.test(error.message)) {
         stop(`Could not reach ${url}. Check SUPABASE_URL and your internet connection.\n(${error.message})`);
@@ -216,10 +249,24 @@ async function main() {
     stop("The tables are missing. In the Supabase dashboard open SQL Editor, paste the whole of\nsupabase/schema.sql, click Run, and run this again.");
   }
 
+  const missingTeam: string[] = [];
+  for (const table of TEAM_TABLES) {
+    const { error } = await client.from(table).select("*").limit(1);
+    if (error) missingTeam.push(table);
+  }
+  check(
+    "the 3 company-account tables exist",
+    missingTeam.length === 0,
+    missingTeam.length > 0
+      ? `missing: ${missingTeam.join(", ")}. Paste supabase/schema.sql into the SQL Editor again and click Run (it is safe to run twice)`
+      : "",
+  );
+
   // 2. Every database operation the app performs.
   const { SupabaseStore } = await import("../lib/db/supabase-store");
   try {
     await runStoreChecks(new SupabaseStore(url, key), owner);
+    if (missingTeam.length === 0) await runTeamChecks(new SupabaseStore(url, key), owner);
   } catch (error) {
     failures++;
     const message = error instanceof Error ? error.message : String(error);
@@ -229,6 +276,11 @@ async function main() {
     }
   } finally {
     // 3. Remove everything this script created.
+    if (missingTeam.length === 0) {
+      await client.from("activity").delete().eq("account_wallet", owner);
+      await client.from("organization_members").delete().eq("org_wallet", owner);
+      await client.from("organizations").delete().eq("wallet", owner);
+    }
     for (const table of ["receipts", "invoices", "payouts", "contacts"]) {
       await client.from(table).delete().eq("owner_wallet", owner);
     }

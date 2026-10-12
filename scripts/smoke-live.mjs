@@ -15,6 +15,9 @@ const BASE = process.argv[2] ?? "http://localhost:3000";
 
 const wallet = Keypair.generate();
 const address = wallet.publicKey.toBase58();
+// A second throwaway wallet, to join the first one's company as a read-only member.
+const member = Keypair.generate();
+const memberAddress = member.publicKey.toBase58();
 const cookies = new Map();
 let failures = 0;
 
@@ -55,7 +58,11 @@ async function cleanUp() {
   for (const table of ["receipts", "invoices", "payouts", "contacts"]) {
     await db.from(table).delete().eq("owner_wallet", address);
   }
-  await db.from("profiles").delete().eq("wallet", address);
+  // On a database without the company tables these three simply answer with an error.
+  await db.from("activity").delete().eq("account_wallet", address);
+  await db.from("organization_members").delete().eq("org_wallet", address);
+  await db.from("organizations").delete().eq("wallet", address);
+  await db.from("profiles").delete().in("wallet", [address, memberAddress]);
   const { count } = await db.from("profiles").select("*", { count: "exact", head: true }).eq("wallet", address);
   check("test rows were removed from Supabase", count === 0);
 }
@@ -108,6 +115,38 @@ try {
   check("CSV export", csv.status === 200 && (await csv.text()).includes("date_brt,tx_signature"));
   const pdf = await call("GET", "/api/reports/pdf");
   check("summary PDF", pdf.status === 200 && Buffer.from(await pdf.arrayBuffer()).subarray(0, 5).toString() === "%PDF-");
+
+  // --- Company account ----------------------------------------------------------
+  const signInAs = async (keypair) => {
+    await json("POST", "/api/auth/logout");
+    const who = keypair.publicKey.toBase58();
+    const challenge = await json("POST", "/api/auth/nonce", { wallet: who });
+    const signed = nacl.sign.detached(new TextEncoder().encode(challenge.body.message ?? ""), keypair.secretKey);
+    return json("POST", "/api/auth/verify", { wallet: who, signature: bs58.encode(signed) });
+  };
+  const team = await json("GET", "/api/team");
+  if (team.status === 503) {
+    check("without the company tables, the app says how to add them", /schema.sql/.test(team.body.error ?? ""), team.body.error);
+    console.log("     Company accounts were NOT tested. Run supabase/schema.sql again in the SQL Editor, then this script.");
+  } else {
+    const company = await json("PUT", "/api/team", { name: "Smoke Test Ltda", tax_id: "00.000.000/0001-00" });
+    check("a company account is created in Supabase", company.body.team?.company?.name === "Smoke Test Ltda", JSON.stringify(company.body).slice(0, 140));
+    const added = await json("POST", "/api/team/members", { wallet: memberAddress, name: "Smoke Member", role: "viewer" });
+    check("a read-only member is added", added.body.team?.members?.length === 1, JSON.stringify(added.body).slice(0, 140));
+    const third = await json("POST", "/api/invoices", { client_name: "Smoke Test Client", description: "As a company", amount: "2", mint });
+    check("company invoices name the company", third.body.invoice?.issuer_name === "Smoke Test Ltda", JSON.stringify(third.body).slice(0, 140));
+
+    await signInAs(member);
+    const accounts = (await json("GET", "/api/accounts")).body.accounts ?? [];
+    check("the member is offered the company account", accounts.some((a) => a.wallet === address && a.role === "viewer"));
+    await json("POST", "/api/accounts", { account: address });
+    check("the member reads the company's invoices", (await json("GET", "/api/invoices")).body.invoices?.length === 3);
+    check("the read-only member cannot create one", (await json("POST", "/api/invoices", { client_name: "X", description: "Y", amount: "1", mint })).status === 403);
+
+    await signInAs(wallet);
+    const trail = (await json("GET", "/api/team")).body.team?.activity ?? [];
+    check("the audit trail is stored in Supabase", trail.some((entry) => entry.label === "Created an invoice"), `${trail.length} entries`);
+  }
 
   await json("POST", "/api/auth/logout");
   check("logout ends the session", (await json("GET", "/api/receipts")).status === 401);

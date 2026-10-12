@@ -5,6 +5,7 @@ import { Transaction } from "@solana/web3.js";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useSession } from "@/components/providers/session-provider";
 import {
   AddressText,
   Button,
@@ -45,6 +46,10 @@ export default function ReceiptPage() {
   const { id } = useParams<{ id: string }>();
   const { connection } = useConnection();
   const { publicKey, signTransaction } = useWallet();
+  const { can } = useSession();
+  const canWrite = can("write");
+  // Sealing is signed by the wallet that received the payment, so only that wallet can do it.
+  const canOwner = can("owner");
 
   const [receipt, setReceipt] = useState<ReceiptView | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -227,7 +232,7 @@ export default function ReceiptPage() {
           ) : (
             <p className="mt-2 text-sm text-muted">No BRL value yet: the exchange rate could not be read.</p>
           )}
-          {!sealed && (
+          {!sealed && canWrite && (
             <button
               type="button"
               onClick={refreshRate}
@@ -264,7 +269,7 @@ export default function ReceiptPage() {
 
         <Card>
           <Eyebrow>What this payment is</Eyebrow>
-          {sealed ? (
+          {sealed || !canWrite ? (
             <dl className="mt-4 space-y-3 text-sm">
               <Row label="Category">{receipt.category && CATEGORY_LABELS[receipt.category]}</Row>
               <Row label="Counterparty">{receipt.contact?.name ?? <span className="text-muted">Not named</span>}</Row>
@@ -379,14 +384,16 @@ export default function ReceiptPage() {
               and can no longer be edited.
             </p>
             <div className="mt-5 flex flex-wrap items-center gap-4">
-              <Button variant="accent" onClick={seal} busy={sealStep !== null} disabled={!canSeal}>
+              <Button variant="accent" onClick={seal} busy={sealStep !== null} disabled={!canSeal || !canOwner}>
                 Seal onchain
               </Button>
               <span className="text-sm text-muted">
-                {sealStep && SEAL_STEPS[sealStep]}
-                {!sealStep && dirty && "Save your changes first."}
-                {!sealStep && !dirty && !receipt.category && "Classify this payment first."}
-                {!sealStep && !dirty && receipt.category && !receipt.amount_brl && "Needs a BRL value first."}
+                {!canOwner &&
+                  "Only the company's own wallet can seal: the seal is signed by the wallet that received the payment."}
+                {canOwner && sealStep && SEAL_STEPS[sealStep]}
+                {canOwner && !sealStep && dirty && "Save your changes first."}
+                {canOwner && !sealStep && !dirty && !receipt.category && "Classify this payment first."}
+                {canOwner && !sealStep && !dirty && receipt.category && !receipt.amount_brl && "Needs a BRL value first."}
               </span>
             </div>
             {sealError && (

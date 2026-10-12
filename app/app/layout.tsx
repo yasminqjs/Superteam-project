@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { useSession } from "@/components/providers/session-provider";
 import { SiteFooter, SiteHeader } from "@/components/site-header";
 import { Card, Loading } from "@/components/ui";
+import { AccountBar } from "@/components/wallet/account-bar";
 import { AccountControl } from "@/components/wallet/account-control";
 
 const NAV = [
@@ -13,6 +14,7 @@ const NAV = [
   { href: "/app/invoices", label: "Invoices" },
   { href: "/app/reports", label: "Reports" },
   { href: "/app/cash-out", label: "Cash out" },
+  { href: "/app/team", label: "Team" },
 ];
 
 function isActive(pathname: string, href: string): boolean {
@@ -30,6 +32,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <SiteHeader>
         <AccountControl />
       </SiteHeader>
+      <AccountBar />
       {session.status === "signed_in" && (
         <nav aria-label="Sections" className="border-b border-line">
           <div className="mx-auto flex w-full max-w-5xl gap-6 overflow-x-auto px-5 sm:px-8">
@@ -56,8 +59,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <Card className="mx-auto mt-10 max-w-md text-center">
             <h1 className="font-display text-3xl">Sign in to continue</h1>
             <p className="mt-3 text-sm leading-6 text-muted">
-              Your payments are private to your wallet. Connect it and sign a message to prove it is
-              yours. Signing is free and sends no transaction.
+              Your payments are private to your wallet and to the team you choose. Connect your
+              wallet and sign a message to prove it is yours. Signing is free and sends no
+              transaction.
             </p>
             <div className="mt-6 flex justify-center">
               <AccountControl />

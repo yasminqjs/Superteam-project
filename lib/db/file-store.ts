@@ -1,12 +1,16 @@
 import { randomUUID } from "node:crypto";
 import { loadState, saveState } from "@/lib/mock/persist";
 import type {
+  Activity,
   Contact,
   FxRateRow,
   Invoice,
+  NewActivity,
   NewInvoice,
   NewPayout,
   NewReceipt,
+  OrgMember,
+  Organization,
   Payout,
   Profile,
   Receipt,
@@ -21,10 +25,23 @@ interface Tables {
   invoices: Invoice[];
   fx_rates: FxRateRow[];
   payouts: Payout[];
+  organizations: Organization[];
+  organization_members: OrgMember[];
+  activity: Activity[];
 }
 
 function emptyTables(): Tables {
-  return { profiles: [], contacts: [], receipts: [], invoices: [], fx_rates: [], payouts: [] };
+  return {
+    profiles: [],
+    contacts: [],
+    receipts: [],
+    invoices: [],
+    fx_rates: [],
+    payouts: [],
+    organizations: [],
+    organization_members: [],
+    activity: [],
+  };
 }
 
 /** Wipes the mock database. */
@@ -43,7 +60,11 @@ function newestFirst<T>(rows: T[], key: (row: T) => string): T[] {
  */
 export class FileStore implements Store {
   private get tables(): Tables {
-    return loadState("db", emptyTables);
+    const tables = loadState("db", emptyTables);
+    // A db.json written before a table existed simply lacks it.
+    const known = tables as unknown as Record<string, unknown[]>;
+    for (const [name, rows] of Object.entries(emptyTables())) known[name] ??= rows;
+    return tables;
   }
 
   private commit(): void {
@@ -190,5 +211,89 @@ export class FileStore implements Store {
   async listPayouts(owner: string): Promise<Payout[]> {
     const rows = this.tables.payouts.filter((row) => row.owner_wallet === owner);
     return newestFirst(rows, (row) => row.created_at).map((row) => ({ ...row }));
+  }
+
+  async getOrganization(wallet: string): Promise<Organization | null> {
+    const organization = this.tables.organizations.find((row) => row.wallet === wallet);
+    return organization ? { ...organization } : null;
+  }
+
+  async listOrganizations(wallets: string[]): Promise<Organization[]> {
+    return this.tables.organizations
+      .filter((row) => wallets.includes(row.wallet))
+      .map((row) => ({ ...row }));
+  }
+
+  async saveOrganization(
+    wallet: string,
+    input: { name: string; tax_id: string | null },
+  ): Promise<Organization> {
+    await this.ensureProfile(wallet);
+    let organization = this.tables.organizations.find((row) => row.wallet === wallet);
+    if (organization) Object.assign(organization, input);
+    else {
+      organization = { wallet, ...input, created_at: new Date().toISOString() };
+      this.tables.organizations.push(organization);
+    }
+    this.commit();
+    return { ...organization };
+  }
+
+  async listMembers(orgWallet: string): Promise<OrgMember[]> {
+    return this.tables.organization_members
+      .filter((row) => row.org_wallet === orgWallet)
+      .sort((a, b) => a.created_at.localeCompare(b.created_at))
+      .map((row) => ({ ...row }));
+  }
+
+  async getMember(orgWallet: string, memberWallet: string): Promise<OrgMember | null> {
+    const member = this.tables.organization_members.find(
+      (row) => row.org_wallet === orgWallet && row.member_wallet === memberWallet,
+    );
+    return member ? { ...member } : null;
+  }
+
+  async saveMember(row: Omit<OrgMember, "created_at">): Promise<OrgMember> {
+    let member = this.tables.organization_members.find(
+      (existing) =>
+        existing.org_wallet === row.org_wallet && existing.member_wallet === row.member_wallet,
+    );
+    // Updating keeps who added the member and when.
+    if (member) Object.assign(member, { name: row.name, role: row.role });
+    else {
+      member = { ...row, created_at: new Date().toISOString() };
+      this.tables.organization_members.push(member);
+    }
+    this.commit();
+    return { ...member };
+  }
+
+  async removeMember(orgWallet: string, memberWallet: string): Promise<void> {
+    const members = this.tables.organization_members;
+    const index = members.findIndex(
+      (row) => row.org_wallet === orgWallet && row.member_wallet === memberWallet,
+    );
+    if (index < 0) return;
+    members.splice(index, 1);
+    this.commit();
+  }
+
+  async listMemberships(memberWallet: string): Promise<OrgMember[]> {
+    return this.tables.organization_members
+      .filter((row) => row.member_wallet === memberWallet)
+      .map((row) => ({ ...row }));
+  }
+
+  async insertActivity(row: NewActivity): Promise<void> {
+    this.tables.activity.push({ ...row, id: randomUUID(), created_at: new Date().toISOString() });
+    this.commit();
+  }
+
+  async listActivity(account: string, limit: number): Promise<Activity[]> {
+    // Reversed first: two actions in the same millisecond still come out latest first.
+    const rows = this.tables.activity.filter((row) => row.account_wallet === account).reverse();
+    return newestFirst(rows, (row) => row.created_at)
+      .slice(0, limit)
+      .map((row) => ({ ...row }));
   }
 }

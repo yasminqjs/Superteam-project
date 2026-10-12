@@ -140,6 +140,8 @@ export default function PayPage() {
               </div>
               <div className="text-right text-sm">
                 <p className="text-muted">Pay to</p>
+                {invoice.issuer_name && <p className="font-medium">{invoice.issuer_name}</p>}
+                {invoice.issuer_tax_id && <p className="text-muted">Tax ID {invoice.issuer_tax_id}</p>}
                 <p className="font-mono" title={invoice.issuer_wallet}>
                   {shortAddress(invoice.issuer_wallet)}
                 </p>

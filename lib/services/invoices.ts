@@ -7,6 +7,7 @@ import { formatTokenAmount, formatUnits, parseUnits } from "@/lib/money/units";
 import { hashDocument } from "@/lib/receipts/canonical";
 import type { Deps } from "@/lib/services/deps";
 import { DEFAULT_CATEGORY, applyFx } from "@/lib/services/receipts";
+import { findCompany } from "@/lib/services/team";
 import { invoiceMemo } from "@/lib/solana/memo";
 import { extractIncomingTransfer, extractMemos, type IncomingTransfer } from "@/lib/solana/parse";
 import { buildSolanaPayUrl } from "@/lib/solana/pay";
@@ -19,6 +20,12 @@ export interface InvoiceDocument {
   network: string;
   number: string;
   issuer_wallet: string;
+  /**
+   * Company accounts only: who issues the invoice, as declared by the company.
+   * Absent on personal invoices, which therefore hash exactly as they always did.
+   */
+  issuer_name?: string;
+  issuer_tax_id?: string;
   client_name: string;
   description: string;
   amount: string;
@@ -34,6 +41,9 @@ export interface InvoiceView {
   id: string;
   number: string;
   issuer_wallet: string;
+  /** Set when the invoice was issued by a company account. */
+  issuer_name: string | null;
+  issuer_tax_id: string | null;
   client_name: string;
   description: string;
   /** Display amount, e.g. "1,200.00". */
@@ -54,14 +64,27 @@ export interface InvoiceView {
   network: string;
 }
 
+/** The issuer as written in the hashed document, which is what the payer committed to. */
+function issuerOf(invoice: Invoice): { name: string | null; taxId: string | null } {
+  try {
+    const document = JSON.parse(invoice.invoice_json) as Partial<InvoiceDocument>;
+    return { name: document.issuer_name ?? null, taxId: document.issuer_tax_id ?? null };
+  } catch {
+    return { name: null, taxId: null };
+  }
+}
+
 export function toInvoiceView(invoice: Invoice): InvoiceView {
   const symbol = findStableMint(invoice.mint)?.symbol ?? "TOKEN";
   const memo = invoiceMemo(invoice.invoice_hash);
   const amountRaw = BigInt(invoice.amount_raw);
+  const issuer = issuerOf(invoice);
   return {
     id: invoice.id,
     number: invoice.number,
     issuer_wallet: invoice.owner_wallet,
+    issuer_name: issuer.name,
+    issuer_tax_id: issuer.taxId,
     client_name: invoice.client_name,
     description: invoice.description,
     amount: formatTokenAmount(amountRaw, invoice.decimals),
@@ -121,6 +144,7 @@ export async function createInvoice(
   const number = `INV-${String(existing.length + 1).padStart(4, "0")}`;
   // Only the public key is used: nobody ever needs to sign with a reference.
   const reference = Keypair.generate().publicKey.toBase58();
+  const company = await findCompany(deps, owner);
 
   const document: InvoiceDocument = {
     type: "recebi.invoice",
@@ -128,6 +152,8 @@ export async function createInvoice(
     network: NETWORK_ID,
     number,
     issuer_wallet: owner,
+    ...(company && { issuer_name: company.name }),
+    ...(company?.tax_id && { issuer_tax_id: company.tax_id }),
     client_name: clientName,
     description,
     amount: formatUnits(amountRaw, token.decimals, { minFractionDigits: 2 }),

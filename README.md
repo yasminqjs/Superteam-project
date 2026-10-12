@@ -1,14 +1,17 @@
 # Recebi
 
-**Proof of income for Brazilians paid in stablecoins.**
+**Stablecoin receivables for Brazilian companies, with proof.**
 
-A growing number of Brazilian freelancers, remote developers and bounty winners are paid in
-stablecoins. The money arrives in seconds, but a wallet only shows anonymous transfers: no
-client, no invoice, no value in reais, and a client payment looks exactly like a transfer
-between your own wallets. Recebi turns that history into records an accountant or an exchange
-can use: connect a Solana wallet and every incoming stablecoin payment becomes an
-accountant-ready record, classified, valued in BRL at the Central Bank's official PTAX rate,
-and backed by a receipt anyone can verify onchain.
+Brazilian software houses, agencies and freelancers increasingly sell services abroad and get
+paid in stablecoins. The money arrives in seconds, but a wallet only shows anonymous
+transfers: no client, no invoice, no value in reais. And since 2026 the paperwork is theirs:
+whoever converts those stablecoins to reais has to be told who paid, for what, and why.
+
+Recebi is the receivables back office for that. A company invoices its client, the client pays
+in stablecoins on Solana with the invoice's hash inside the payment, and every payment becomes
+a record the company's team, its accountant and its exchange can use: tied to its invoice,
+valued in BRL at the Central Bank's official PTAX rate, and backed by a receipt anyone can
+verify onchain.
 
 Recebi does not convert currency, custody funds or calculate taxes.
 
@@ -16,12 +19,21 @@ Recebi does not convert currency, custody funds or calculate taxes.
 
 ## Why now
 
-- In 2026, Brazil's Central Bank rules for virtual assets started treating international crypto
-  payments and stablecoin trades as foreign exchange, and require providers to identify the
-  owners of self-custody wallets and verify the origin of funds.
-- The tax authority's DeCripto reporting (IN RFB 2.291/2025, for operations from 1 July 2026)
-  asks for dates, values in reais, wallets and supporting documents.
-- Stablecoins were about 80% of the crypto volume declared to Brazil's tax authority in 2025.
+- **2 February 2026.** Brazil's Central Bank (Resolution 521) put stablecoin trades and
+  international payments made with virtual assets inside the foreign-exchange market.
+  Providers must identify the counterparty of each operation, including the owners of
+  self-custody wallets, classify it and report it.
+- **1 July 2026.** The tax authority's DeCripto reporting (IN RFB 2.291/2025) started asking for
+  dates, values in reais, wallets and supporting documents every month.
+- **1 October 2026.** Resolution 561 stopped regulated cross-border payment providers (eFX) from
+  settling abroad in stablecoins. A company can still be paid in stablecoins directly and
+  convert them through an authorised provider, and on that route the documentation is the
+  company's job. Since the same day (Resolution 588), self-custody transfers from US$ 10,000 are
+  reported to the financial intelligence unit.
+- **1 November 2026.** Binance Brazil starts holding international deposits, including those
+  from self-custody wallets, until the customer states the purpose and the counterparty.
+- Brazil exported a record US$ 51.8 billion in services in 2025, 65% of it digital. Stablecoins
+  were about 84% of the crypto volume declared to the tax authority in the first half of 2026.
 
 ## What it does
 
@@ -42,15 +54,42 @@ Recebi does not convert currency, custody funds or calculate taxes.
 8. **Report.** Monthly CSV and PDF for the accountant, and a "proof of origin" PDF with a QR
    code per receipt for an exchange.
 9. **Cash out (simulated).** A Pix payout screen with a quote, clearly marked as simulated.
+10. **Work as a company.** Give the account a company name and tax ID and add your team by
+    wallet address, each with a role. Invoices then name the company inside the hashed
+    document the payer commits to.
 
 > Tax rules may require a different rate date. Recebi stores the rate and the date used; your
 > accountant decides the rule.
+
+## Company accounts
+
+An account is always one wallet: the one that receives the payments. A company account is that
+same account with a name, a tax ID and a team. Nobody shares keys. Each person signs in with
+their own wallet and picks the company under "Switch account".
+
+| Role | Who | Can |
+|---|---|---|
+| Owner | The company wallet itself | Everything, including what needs its signature: sealing receipts and cashing out. Manages the team |
+| Finance | Colleagues | Import and classify payments, create invoices, change the BRL rule, prepare reports and payout quotes |
+| Read-only | Accountants, auditors | See payments, invoices and reports and download them |
+
+- The role is checked on the server on every request, against the database. The cookie that
+  remembers which account you picked is only a wish, so removing someone ends their access on
+  their next click.
+- A read-only wallet can belong to many companies, which is how an accountant follows several
+  clients from one login.
+- Company accounts keep an **audit trail**: who imported, classified, sealed, invoiced or
+  changed the team, by name. The name is stored when the action happens, so the trail still
+  reads well after someone leaves.
+- Sealing stays with the owner on purpose. A seal is only worth something because it is signed
+  by the wallet that received the payment, so no role can do it on that wallet's behalf.
+- The company name and tax ID are declared by the company. Recebi does not verify them.
 
 ## Architecture
 
 ```mermaid
 flowchart TB
-  ana["Ana<br/>dashboard"] --> app
+  ana["Company team<br/>dashboard"] --> app
   client["Client<br/>/pay"] --> app
   auditor["Accountant / exchange<br/>/verify"] --> app
 
@@ -146,7 +185,8 @@ The receipt itself:
 ```
 
 Invoice payments carry `recebi:inv:v1:<invoice_hash>` in their memo, where `invoice_hash` is the
-SHA-256 of the invoice's canonical JSON.
+SHA-256 of the invoice's canonical JSON. For a company account that JSON includes `issuer_name`
+and `issuer_tax_id`, so the payer's own transaction commits to who issued the invoice.
 
 ### Verification algorithm
 
@@ -179,7 +219,7 @@ to write one.
 | Wallet sign-in, history import, PTAX conversion, sealing, public verification, Solana Pay invoices, CSV and PDF exports | Real, on devnet |
 | Pix cash-out | **Simulated.** It sits behind a `PayoutProvider` interface; in production a partner authorised by the Central Bank executes it. No tokens move |
 | Stablecoin in the demo | A devnet test token ("Test USD"), because Circle's devnet faucet limits how much USDC it gives. Devnet USDC works too |
-| Identity | No KYC. The payer's name is whatever the recipient declares |
+| Identity | No KYC. The payer's name is whatever the recipient declares, and so are a company's name and tax ID. Team members are identified by their wallets only |
 
 ### Mock mode
 
@@ -219,7 +259,8 @@ instead (`npm.cmd run dev:mock`).
 ### Live mode: Solana devnet
 
 1. Create a free [Supabase](https://supabase.com) project. In its SQL Editor, run
-   [`supabase/schema.sql`](supabase/schema.sql).
+   [`supabase/schema.sql`](supabase/schema.sql). If you set the project up before company
+   accounts existed, run the file again: it is idempotent and only adds the three new tables.
 2. Fill in `.env.local`:
 
    | Variable | Value |
@@ -250,8 +291,8 @@ from the database, only the server can, with the `service_role` key.
 
 | Command | What it does |
 |---|---|
-| `npm test` | Unit tests: transfer extraction on real devnet transactions, canonical JSON and hashing, PTAX rules, and the whole product flow on the mock node |
-| `npm run smoke:mock` | Walks every API route over HTTP against a running mock-mode server |
+| `npm test` | Unit tests: transfer extraction on real devnet transactions, canonical JSON and hashing, PTAX rules, company roles and the audit trail, and the whole product flow on the mock node |
+| `npm run smoke:mock` | Walks every API route over HTTP against a running mock-mode server, then signs in as a Finance member, a Read-only member and an outsider and checks what each one is refused |
 | `npm run e2e:live` | The whole live flow through the API of a running live-mode server, after `seed:demo`: imports real devnet payments into Supabase, pays an invoice and seals a receipt on devnet, verifies it, then deletes what it wrote |
 | `npm run smoke:live` | Walks the API of a running live-mode server with a throwaway wallet: signed-message login, Supabase persistence, real PTAX, invoices, CSV and PDF. Deletes what it created |
 | `npm run check:supabase` | Tests a real Supabase project through the app's own database code: connection, tables and every operation, using throwaway rows that it deletes afterwards |
@@ -260,12 +301,15 @@ from the database, only the server can, with the `service_role` key.
 
 ## Roadmap
 
-- USDT on Solana (most of the stablecoin volume declared in Brazil is USDT; the import already
-  works with any SPL mint)
-- A licensed Pix payout partner behind the `PayoutProvider` interface
+- Mainnet, and USDT on Solana (most of the stablecoin volume declared in Brazil is USDT; the
+  import already works with any SPL mint)
+- A provider authorised by the Central Bank behind the `PayoutProvider` interface, receiving
+  the purpose and counterparty of each conversion from the invoice instead of from a form
+- The export file per payment: invoice, payment, conversion and tax-ready values in one place,
+  in Portuguese
+- Sign-in by e-mail for accountants who do not have a wallet
 - Brazilian service invoice (NFS-e) issuance
-- A multi-client plan for accounting firms
-- Optional KYC of the payer
+- Advances on verified invoices, once accounts have a payment history to underwrite
 
 ## Open-source libraries
 

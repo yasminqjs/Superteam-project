@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "@/components/providers/session-provider";
 import { Badge, ButtonLink, Card, Loading, Notice, PageTitle } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api-client";
 import type { InvoiceView } from "@/lib/services/invoices";
 import { brtDateTime } from "@/lib/time";
 
 export default function InvoicesPage() {
+  const { can } = useSession();
   const [invoices, setInvoices] = useState<InvoiceView[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -34,7 +36,7 @@ export default function InvoicesPage() {
   return (
     <div>
       <PageTitle title="Invoices">
-        <ButtonLink href="/app/invoices/new">New invoice</ButtonLink>
+        {can("write") && <ButtonLink href="/app/invoices/new">New invoice</ButtonLink>}
       </PageTitle>
       <p className="mt-3 max-w-2xl text-muted">
         Send a client a payment link. When they pay, the payment arrives here already classified,

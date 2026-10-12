@@ -26,7 +26,8 @@ async function loadDashboard(): Promise<DashboardData> {
 }
 
 export default function DashboardPage() {
-  const { session, setFxRule } = useSession();
+  const { session, setFxRule, can } = useSession();
+  const canWrite = can("write");
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -86,9 +87,11 @@ export default function DashboardPage() {
   return (
     <div>
       <PageTitle title="Payments">
-        <Button onClick={importFromWallet} busy={importing}>
-          Import from wallet
-        </Button>
+        {canWrite && (
+          <Button onClick={importFromWallet} busy={importing}>
+            Import from wallet
+          </Button>
+        )}
       </PageTitle>
 
       <div className="mt-6 space-y-3">
@@ -126,7 +129,7 @@ export default function DashboardPage() {
               <select
                 aria-label="BRL valuation rule"
                 value={fxRule}
-                disabled={changingRule}
+                disabled={changingRule || !canWrite}
                 onChange={(event) => changeRule(event.target.value as FxRule)}
                 className="mt-2 h-10 w-full rounded-md border border-line bg-surface px-3 text-sm"
               >
@@ -144,9 +147,11 @@ export default function DashboardPage() {
           </section>
 
           <div className="mt-6 flex flex-wrap gap-3">
-            <ButtonLink href="/app/invoices/new" variant="secondary">
-              New invoice
-            </ButtonLink>
+            {canWrite && (
+              <ButtonLink href="/app/invoices/new" variant="secondary">
+                New invoice
+              </ButtonLink>
+            )}
             <ButtonLink href="/app/reports" variant="secondary">
               Monthly report
             </ButtonLink>

@@ -109,6 +109,41 @@ export interface Payout {
 
 export type NewPayout = Omit<Payout, "id" | "created_at">;
 
+/** A company account: the account of `wallet`, with a name and a team. */
+export interface Organization {
+  /** The wallet that receives the company's payments. Also the account's key everywhere else. */
+  wallet: string;
+  name: string;
+  /** CNPJ or another tax ID, as typed. Declared by the company, not verified. */
+  tax_id: string | null;
+  created_at: string;
+}
+
+/** A wallet allowed to act on a company account. The company wallet itself is not listed. */
+export interface OrgMember {
+  org_wallet: string;
+  member_wallet: string;
+  name: string;
+  role: "finance" | "viewer";
+  added_by: string;
+  created_at: string;
+}
+
+/** One line of a company account's audit trail: who did what. */
+export interface Activity {
+  id: string;
+  account_wallet: string;
+  actor_wallet: string;
+  /** The actor's name on the team when they acted. Kept even if they are later removed. */
+  actor_name: string;
+  /** A code such as "invoice.created" (see ACTIVITY_LABELS). */
+  action: string;
+  detail: string | null;
+  created_at: string;
+}
+
+export type NewActivity = Omit<Activity, "id" | "created_at">;
+
 /**
  * Everything the app needs from a database. Two implementations: Supabase
  * (live mode) and a local JSON file (mock mode).
@@ -144,4 +179,23 @@ export interface Store {
 
   insertPayout(row: NewPayout): Promise<Payout>;
   listPayouts(owner: string): Promise<Payout[]>;
+
+  getOrganization(wallet: string): Promise<Organization | null>;
+  /** Several organizations at once; wallets that are not companies are simply absent. */
+  listOrganizations(wallets: string[]): Promise<Organization[]>;
+  /** Creates the company account for `wallet` or updates its details. */
+  saveOrganization(wallet: string, input: { name: string; tax_id: string | null }): Promise<Organization>;
+
+  /** Oldest first. */
+  listMembers(orgWallet: string): Promise<OrgMember[]>;
+  getMember(orgWallet: string, memberWallet: string): Promise<OrgMember | null>;
+  /** Adds the member or updates their name and role. */
+  saveMember(row: Omit<OrgMember, "created_at">): Promise<OrgMember>;
+  removeMember(orgWallet: string, memberWallet: string): Promise<void>;
+  /** Every company account `memberWallet` belongs to. */
+  listMemberships(memberWallet: string): Promise<OrgMember[]>;
+
+  insertActivity(row: NewActivity): Promise<void>;
+  /** Newest first. */
+  listActivity(account: string, limit: number): Promise<Activity[]>;
 }

@@ -19,6 +19,10 @@ export const MOCK_KEYS = {
   ana: keypairFromLabel("wallet:ana"),
   /** Ana's second wallet, to demonstrate "own transfer". */
   anaSavings: keypairFromLabel("wallet:ana-savings"),
+  /** A colleague who handles the company's invoices: the "Finance" role. */
+  bia: keypairFromLabel("wallet:bia"),
+  /** The company's outside accountant: the "Read-only" role. */
+  caio: keypairFromLabel("wallet:caio"),
   /** A foreign client that pays for services. */
   clientAcme: keypairFromLabel("wallet:client-acme"),
   /** A bounty platform that pays prizes. */

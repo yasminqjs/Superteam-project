@@ -1,17 +1,22 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type {
+  Activity,
   Contact,
   FxRateRow,
   Invoice,
+  NewActivity,
   NewInvoice,
   NewPayout,
   NewReceipt,
+  OrgMember,
+  Organization,
   Payout,
   Profile,
   Receipt,
   ReceiptPatch,
   Store,
 } from "@/lib/db/types";
+import { ConfigError } from "@/lib/errors";
 
 /**
  * Column lists with ::text casts on every numeric column. PostgREST would
@@ -25,9 +30,26 @@ const FX_COLUMNS = "requested_date, rule, quote_date, rate::text";
 const PAYOUT_COLUMNS =
   "id, owner_wallet, amount_raw, mint, amount_brl::text, pix_key, provider, status, created_at";
 
-function unwrap<T>(result: { data: unknown; error: { message: string } | null }, what: string): T {
+type Result = { data: unknown; error: { message: string; code?: string } | null };
+
+function unwrap<T>(result: Result, what: string): T {
   if (result.error) throw new Error(`Database error (${what}): ${result.error.message}`);
   return result.data as T;
+}
+
+/**
+ * Same as unwrap, for the company-account tables. They were added after the
+ * first version of the schema, so a database set up earlier does not have them
+ * yet. That case gets its own message, because the fix is a single step.
+ */
+function unwrapTeam<T>(result: Result, what: string): T {
+  const error = result.error;
+  if (error && (error.code === "PGRST205" || error.code === "42P01" || /schema cache/i.test(error.message))) {
+    throw new ConfigError(
+      "Company accounts need a database update. Run supabase/schema.sql again in the Supabase SQL Editor (it is safe to run twice).",
+    );
+  }
+  return unwrap<T>(result, what);
 }
 
 /**
@@ -190,6 +212,108 @@ export class SupabaseStore implements Store {
         .eq("owner_wallet", owner)
         .order("created_at", { ascending: false }),
       "payouts",
+    );
+  }
+
+  async getOrganization(wallet: string): Promise<Organization | null> {
+    return unwrapTeam<Organization | null>(
+      await this.db.from("organizations").select("*").eq("wallet", wallet).maybeSingle(),
+      "company",
+    );
+  }
+
+  async listOrganizations(wallets: string[]): Promise<Organization[]> {
+    if (wallets.length === 0) return [];
+    return unwrapTeam<Organization[]>(
+      await this.db.from("organizations").select("*").in("wallet", wallets),
+      "companies",
+    );
+  }
+
+  async saveOrganization(
+    wallet: string,
+    input: { name: string; tax_id: string | null },
+  ): Promise<Organization> {
+    await this.ensureProfile(wallet);
+    return unwrapTeam<Organization>(
+      await this.db
+        .from("organizations")
+        .upsert({ wallet, ...input }, { onConflict: "wallet" })
+        .select("*")
+        .single(),
+      "save company",
+    );
+  }
+
+  async listMembers(orgWallet: string): Promise<OrgMember[]> {
+    return unwrapTeam<OrgMember[]>(
+      await this.db
+        .from("organization_members")
+        .select("*")
+        .eq("org_wallet", orgWallet)
+        .order("created_at", { ascending: true }),
+      "team",
+    );
+  }
+
+  async getMember(orgWallet: string, memberWallet: string): Promise<OrgMember | null> {
+    return unwrapTeam<OrgMember | null>(
+      await this.db
+        .from("organization_members")
+        .select("*")
+        .eq("org_wallet", orgWallet)
+        .eq("member_wallet", memberWallet)
+        .maybeSingle(),
+      "team member",
+    );
+  }
+
+  async saveMember(row: Omit<OrgMember, "created_at">): Promise<OrgMember> {
+    const existing = await this.getMember(row.org_wallet, row.member_wallet);
+    // Updating keeps who added the member and when.
+    const result = existing
+      ? await this.db
+          .from("organization_members")
+          .update({ name: row.name, role: row.role })
+          .eq("org_wallet", row.org_wallet)
+          .eq("member_wallet", row.member_wallet)
+          .select("*")
+          .single()
+      : await this.db.from("organization_members").insert(row).select("*").single();
+    return unwrapTeam<OrgMember>(result, "save team member");
+  }
+
+  async removeMember(orgWallet: string, memberWallet: string): Promise<void> {
+    unwrapTeam<null>(
+      await this.db
+        .from("organization_members")
+        .delete()
+        .eq("org_wallet", orgWallet)
+        .eq("member_wallet", memberWallet),
+      "remove team member",
+    );
+  }
+
+  async listMemberships(memberWallet: string): Promise<OrgMember[]> {
+    return unwrapTeam<OrgMember[]>(
+      await this.db.from("organization_members").select("*").eq("member_wallet", memberWallet),
+      "memberships",
+    );
+  }
+
+  async insertActivity(row: NewActivity): Promise<void> {
+    unwrapTeam<null>(await this.db.from("activity").insert(row), "record activity");
+  }
+
+  async listActivity(account: string, limit: number): Promise<Activity[]> {
+    return unwrapTeam<Activity[]>(
+      await this.db
+        .from("activity")
+        .select("*")
+        .eq("account_wallet", account)
+        .order("created_at", { ascending: false })
+        .limit(limit),
+      "activity",
     );
   }
 }

@@ -83,6 +83,43 @@ create table if not exists payouts (
   created_at timestamptz default now()
 );
 
+-- Company accounts. An account is always one wallet (the one that receives the
+-- payments); a company is that account with a name, a tax ID and a team.
+create table if not exists organizations (
+  wallet text primary key references profiles(wallet),
+  name text not null,
+  tax_id text,                                 -- CNPJ or similar, as declared
+  created_at timestamptz default now()
+);
+
+-- Wallets allowed to act on a company account. The company wallet itself is
+-- the owner and is not listed here.
+create table if not exists organization_members (
+  org_wallet text not null references organizations(wallet) on delete cascade,
+  member_wallet text not null,
+  name text not null,
+  role text not null,                          -- 'finance' | 'viewer'
+  added_by text not null,
+  created_at timestamptz default now(),
+  primary key (org_wallet, member_wallet)
+);
+
+-- Audit trail of a company account: who did what.
+create table if not exists activity (
+  id uuid primary key default gen_random_uuid(),
+  account_wallet text not null,
+  actor_wallet text not null,
+  actor_name text not null,                    -- their name on the team at the time
+  action text not null,                        -- e.g. 'invoice.created'
+  detail text,
+  created_at timestamptz default now()
+);
+
+create index if not exists organization_members_member_idx
+  on organization_members (member_wallet);
+create index if not exists activity_account_created_idx
+  on activity (account_wallet, created_at desc);
+
 -- The dashboard lists receipts by owner, newest first.
 create index if not exists receipts_owner_block_time_idx
   on receipts (owner_wallet, block_time desc);
@@ -96,3 +133,9 @@ alter table receipts enable row level security;
 alter table invoices enable row level security;
 alter table fx_rates enable row level security;
 alter table payouts  enable row level security;
+alter table organizations        enable row level security;
+alter table organization_members enable row level security;
+alter table activity             enable row level security;
+
+-- Make tables created by this run visible to the API layer at once.
+notify pgrst, 'reload schema';

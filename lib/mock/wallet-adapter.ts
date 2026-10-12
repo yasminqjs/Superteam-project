@@ -7,7 +7,7 @@ import {
 } from "@solana/wallet-adapter-base";
 import { Transaction, type PublicKey, type VersionedTransaction } from "@solana/web3.js";
 import nacl from "tweetnacl";
-import { MOCK_KEYS } from "@/lib/mock/keys";
+import { currentMockIdentity } from "@/lib/mock/identity";
 
 export const MOCK_WALLET_NAME = "Recebi demo wallet" as WalletName<"Recebi demo wallet">;
 
@@ -18,7 +18,8 @@ const ICON =
   );
 
 /**
- * Mock mode's wallet: plays the part of Phantom with the demo key "ana".
+ * Mock mode's wallet: plays the part of Phantom with one of the demo keys
+ * ("ana" unless another demo person was picked in the mock banner).
  *
  * It plugs into the same wallet-adapter interface, so the app's code does not
  * change: it still asks "the wallet" to sign messages and transactions, and
@@ -33,7 +34,7 @@ export class MockWalletAdapter extends BaseMessageSignerWalletAdapter<"Recebi de
   readyState = WalletReadyState.Installed;
   supportedTransactionVersions: SupportedTransactionVersions = null;
 
-  private keypair = MOCK_KEYS.ana;
+  private keypair = currentMockIdentity().keypair;
   private currentKey: PublicKey | null = null;
   private isConnecting = false;
 
@@ -53,6 +54,7 @@ export class MockWalletAdapter extends BaseMessageSignerWalletAdapter<"Recebi de
     // development React mounts everything twice, so an instant answer would be
     // delivered to listeners that are about to be thrown away.)
     await new Promise((resolve) => setTimeout(resolve, 0));
+    this.keypair = currentMockIdentity().keypair;
     this.currentKey = this.keypair.publicKey;
     this.isConnecting = false;
     this.emit("connect", this.currentKey);

@@ -173,6 +173,66 @@ check("payout quote is flagged as simulated", quote.body.quote?.simulated === tr
 const payout = await json("POST", "/api/payouts", { mint, amount: "1000", pix_key: "ana@example.com" });
 check("payout is recorded as simulated", payout.body.payout?.status === "simulated");
 
+// --- Company account and team -----------------------------------------------
+const demoKey = (label) =>
+  Keypair.fromSeed(nacl.hash(new TextEncoder().encode(`recebi-mock:wallet:${label}`)).slice(0, 32));
+const bia = demoKey("bia");
+const caio = demoKey("caio");
+const stranger = demoKey("stranger");
+
+/** Ends the current session and signs in with another demo wallet. */
+async function signInAs(keypair) {
+  await json("POST", "/api/auth/logout");
+  const address = keypair.publicKey.toBase58();
+  const challenge = await json("POST", "/api/auth/nonce", { wallet: address });
+  const signed = nacl.sign.detached(new TextEncoder().encode(challenge.body.message), keypair.secretKey);
+  return json("POST", "/api/auth/verify", { wallet: address, signature: bs58.encode(signed) });
+}
+const newInvoice = (client) =>
+  json("POST", "/api/invoices", { client_name: client, description: "Consulting", amount: "100", mint });
+
+const company = await json("PUT", "/api/team", { name: "Baía Software Ltda", tax_id: "12.345.678/0001-90" });
+check("the owner turns the account into a company", company.body.team?.company?.name === "Baía Software Ltda", JSON.stringify(company.body).slice(0, 160));
+check("the session names the company", (await json("GET", "/api/auth/me")).body.company_name === "Baía Software Ltda");
+await json("POST", "/api/team/members", { wallet: bia.publicKey.toBase58(), name: "Bia", role: "finance" });
+const team = await json("POST", "/api/team/members", { wallet: caio.publicKey.toBase58(), name: "Caio", role: "viewer" });
+check("two members added", team.body.team?.members.length === 2, JSON.stringify(team.body).slice(0, 160));
+check("company invoices carry the company's name", (await newInvoice("Globex")).body.invoice?.issuer_name === "Baía Software Ltda");
+
+await signInAs(bia);
+check("a member starts on their own, empty account", (await json("GET", "/api/receipts")).body.receipts?.length === 0);
+const accounts = (await json("GET", "/api/accounts")).body.accounts ?? [];
+check("the member is offered the company account", accounts.some((a) => a.wallet === wallet && a.role === "finance"));
+check("switching to it reports the Finance role", (await json("POST", "/api/accounts", { account: wallet })).body.role === "finance");
+const companyReceipts = (await json("GET", "/api/receipts")).body.receipts ?? [];
+check("Finance sees the company's payments", companyReceipts.length >= 4, `${companyReceipts.length} receipts`);
+check("Finance can create an invoice", (await newInvoice("Initech")).status === 200);
+const open = companyReceipts.find((r) => r.status !== "sealed");
+check("Finance cannot seal (owner wallet only)", (await json("POST", `/api/receipts/${open.id}/seal`)).status === 403);
+check("Finance cannot cash out", (await json("POST", "/api/payouts", { mint, amount: "10", pix_key: "bia@example.com" })).status === 403);
+check("Finance cannot change the team", (await json("POST", "/api/team/members", { wallet: stranger.publicKey.toBase58(), name: "X", role: "finance" })).status === 403);
+
+await signInAs(caio);
+await json("POST", "/api/accounts", { account: wallet });
+check("Read-only sees the company's payments", ((await json("GET", "/api/receipts")).body.receipts ?? []).length >= 4);
+check("Read-only cannot classify", (await json("PATCH", `/api/receipts/${open.id}`, { category: "service" })).status === 403);
+check("Read-only cannot create invoices", (await newInvoice("Hooli")).status === 403);
+check("Read-only can download the month's CSV", (await call("GET", "/api/reports/csv")).status === 200);
+
+await signInAs(stranger);
+check("a wallet outside the team cannot switch in", (await json("POST", "/api/accounts", { account: wallet })).status === 403);
+cookies.set("recebi_account", wallet);
+check("a forged account cookie is refused", (await json("GET", "/api/receipts")).status === 403);
+
+await signInAs(ana);
+await json("DELETE", `/api/team/members/${bia.publicKey.toBase58()}`);
+await signInAs(bia);
+check("a removed member loses access at once", (await json("POST", "/api/accounts", { account: wallet })).status === 403);
+
+await signInAs(ana);
+const trail = (await json("GET", "/api/team")).body.team?.activity ?? [];
+check("the audit trail says who did what", trail.some((e) => e.actor_name === "Bia" && e.label === "Created an invoice"), `${trail.length} entries`);
+
 // --- Logout -----------------------------------------------------------------
 await json("POST", "/api/auth/logout");
 check("logout ends the session", (await json("GET", "/api/receipts")).status === 401);

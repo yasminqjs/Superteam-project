@@ -14,7 +14,7 @@ import { brtDateTime } from "@/lib/time";
 
 export default function CashOutPage() {
   const { connection } = useConnection();
-  const { session } = useSession();
+  const { session, can } = useSession();
   const wallet = session.status === "signed_in" ? session.wallet : null;
 
   const [mint, setMint] = useState(STABLE_MINTS[0].mint);
@@ -154,7 +154,7 @@ export default function CashOutPage() {
               />
             </Field>
             {error && <Notice>{error}</Notice>}
-            <Button type="submit" variant="secondary" busy={busy === "quote"}>
+            <Button type="submit" variant="secondary" busy={busy === "quote"} disabled={!can("write")}>
               Get quote
             </Button>
           </form>
@@ -181,11 +181,17 @@ export default function CashOutPage() {
                 className="mt-5"
                 onClick={requestPayout}
                 busy={busy === "payout"}
-                disabled={!pixKey.trim()}
+                disabled={!pixKey.trim() || !can("owner")}
               >
                 Simulate payout
               </Button>
-              {!pixKey.trim() && <p className="mt-2 text-sm text-muted">Enter a Pix key first.</p>}
+              {!can("owner") ? (
+                <p className="mt-2 text-sm text-muted">
+                  Only the company&apos;s own wallet can cash out. Your role can prepare the quote.
+                </p>
+              ) : (
+                !pixKey.trim() && <p className="mt-2 text-sm text-muted">Enter a Pix key first.</p>
+              )}
             </>
           )}
         </Card>
