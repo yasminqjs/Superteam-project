@@ -101,8 +101,12 @@ export function Verifier({
           }),
         );
       } catch (caught) {
+        // A network failure is shown as exactly that. It must never look like
+        // a verdict about the receipt.
         setResult(null);
-        setError(`Could not reach the Solana RPC: ${errorMessage(caught)}`);
+        setError(
+          `${errorMessage(caught)}. This is a network problem, not a verdict about the receipt. Try again in a moment.`,
+        );
       } finally {
         setRunning(false);
       }

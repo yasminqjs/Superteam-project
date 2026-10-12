@@ -19,7 +19,7 @@ import {
   buttonClass,
   inputClass,
 } from "@/components/ui";
-import { api, errorMessage } from "@/lib/api-client";
+import { ApiError, api, errorMessage } from "@/lib/api-client";
 import {
   CONTACT_KINDS,
   RECEIPT_CATEGORIES,
@@ -158,11 +158,23 @@ export default function ReceiptPage() {
       });
 
       setSealStep("confirming");
-      const { receipt: updated } = await api<{ receipt: ReceiptView }>(`/api/receipts/${id}/seal`, {
-        method: "PUT",
-        json: { signature },
-      });
-      show(updated);
+      // The transaction is already onchain. If the server cannot reach the RPC
+      // to check it (503), ask again with the same signature instead of
+      // making the user sign a second seal.
+      for (let attempt = 0; ; attempt++) {
+        try {
+          const { receipt: updated } = await api<{ receipt: ReceiptView }>(
+            `/api/receipts/${id}/seal`,
+            { method: "PUT", json: { signature } },
+          );
+          show(updated);
+          break;
+        } catch (caught) {
+          const retryable = caught instanceof ApiError && caught.status === 503;
+          if (!retryable || attempt >= 3) throw caught;
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+        }
+      }
     } catch (caught) {
       setSealError(errorMessage(caught));
     } finally {

@@ -1,7 +1,17 @@
+/** A failed API call: the server's message, plus the HTTP status for callers that care. */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
 /**
  * Calls one of our own API routes from the browser. Sends `json` as the body
- * and throws an Error carrying the server's message when the answer is not 2xx,
- * so callers can show `error.message` directly.
+ * and throws an ApiError carrying the server's message when the answer is not
+ * 2xx, so callers can show `error.message` directly.
  */
 export async function api<T>(
   path: string,
@@ -19,7 +29,7 @@ export async function api<T>(
       body && typeof body === "object" && "error" in body && typeof body.error === "string"
         ? body.error
         : `Request failed (HTTP ${response.status})`;
-    throw new Error(message);
+    throw new ApiError(message, response.status);
   }
   return body as T;
 }

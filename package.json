@@ -13,8 +13,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "smoke:mock": "node scripts/smoke-mock.mjs",
+    "smoke:live": "node scripts/smoke-live.mjs",
+    "e2e:live": "tsx scripts/e2e-live.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
-    "check:live": "tsx scripts/live-check.ts"
+    "check:live": "tsx scripts/live-check.ts",
+    "check:supabase": "tsx scripts/check-supabase.ts"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.9.0",

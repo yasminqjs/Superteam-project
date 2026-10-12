@@ -15,7 +15,7 @@ import { IS_MOCK, NETWORK_ID } from "@/lib/mode";
 import { formatTokenAmount, formatUnits } from "@/lib/money/units";
 import { hashDocument } from "@/lib/receipts/canonical";
 import type { ReceiptDocument } from "@/lib/receipts/document";
-import { verifyReceipt } from "@/lib/receipts/verify";
+import { RpcUnavailableError, verifyReceipt, type VerificationResult } from "@/lib/receipts/verify";
 import type { Deps } from "@/lib/services/deps";
 import { scanIncomingTransfers } from "@/lib/solana/import";
 import { sealMemo } from "@/lib/solana/memo";
@@ -369,25 +369,35 @@ export async function confirmSeal(
   if (receipt.seal_signature) return viewOf(deps, owner, receipt);
   if (!receipt.receipt_json) throw badRequest("Prepare the seal before confirming it.");
 
-  // The node we ask may be a moment behind the one that confirmed the transaction.
-  let result = await verifyReceipt({
-    receiptJson: receipt.receipt_json,
-    sealSignature: signature,
-    connection: deps.connection,
-    network: NETWORK_ID,
-  });
-  for (let attempt = 0; attempt < 5 && !result.verified; attempt++) {
+  // Two things can make a good seal look bad for a moment: the node we ask may
+  // be a little behind the one that confirmed the transaction, and the RPC may
+  // be rate-limiting us. Both get a few more attempts before we give an answer.
+  let result: VerificationResult | null = null;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    if (attempt > 0) await sleep(1500);
+    try {
+      result = await verifyReceipt({
+        receiptJson: receipt.receipt_json,
+        sealSignature: signature,
+        connection: deps.connection,
+        network: NETWORK_ID,
+      });
+    } catch (error) {
+      if (!(error instanceof RpcUnavailableError)) throw error;
+      result = null;
+      continue;
+    }
     const notFoundYet = result.checks.some(
       (check) => !check.ok && (check.id === "seal_found" || check.id === "payment_found"),
     );
     if (!notFoundYet) break;
-    await sleep(1500);
-    result = await verifyReceipt({
-      receiptJson: receipt.receipt_json,
-      sealSignature: signature,
-      connection: deps.connection,
-      network: NETWORK_ID,
-    });
+  }
+  if (!result) {
+    throw new HttpError(
+      503,
+      "The Solana RPC is not answering, so the seal could not be checked yet. " +
+        "Your transaction was sent and is safe: wait a moment and try again.",
+    );
   }
   if (!result.verified) {
     const failed = result.checks.filter((check) => !check.ok).map((check) => check.label);

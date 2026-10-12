@@ -2,8 +2,10 @@
 // and four payments to "ana". Run with:  npm run seed:demo
 //
 // Safe to run again: wallets and the mint are reused, and the payments are
-// only sent once (pass --again to send another round).
-// Pass --show-key to print ana's private key for importing into Phantom.
+// only sent once.
+//   --again     send another round of payments to the same ana
+//   --new-ana   start over with a fresh ana wallet (the old key is archived)
+//   --show-key  print the private keys for importing into Phantom
 import fs from "node:fs";
 import path from "node:path";
 import {
@@ -47,6 +49,15 @@ async function main() {
   loadEnv();
   const connection = await devnetConnection();
   const args = new Set(process.argv.slice(2));
+
+  // --new-ana: start over with a fresh recipient wallet. The old key is kept
+  // next to it, so nothing is lost.
+  if (args.has("--new-ana") && hasKeypair("ana")) {
+    const archived = path.join(KEYS_DIR, `ana.previous-${Date.now()}.json`);
+    fs.renameSync(path.join(KEYS_DIR, "ana.json"), archived);
+    fs.rmSync(path.join(KEYS_DIR, "seeded.json"), { force: true });
+    console.log(`Archived the previous ana wallet as ${path.basename(archived)}.`);
+  }
 
   const firstRun = !hasKeypair("ana");
   const ana = loadOrCreateKeypair("ana");
@@ -104,35 +115,42 @@ async function main() {
       { payer: savings, amount: "300", memo: undefined },
       { payer: stranger, amount: "85", memo: undefined },
     ];
-    for (const { payer, amount, memo } of payments) {
-      const amountRaw = parseUnits(amount, DECIMALS);
+    // First give every payer their tokens, in a transaction of its own.
+    //
+    // This must NOT happen in the same transaction as the payment: Recebi finds
+    // the payer by looking for the wallet whose balance went DOWN. A payer who
+    // is minted 1,200 and sends 1,200 in one transaction ends where they
+    // started, and the payment would be imported with no payer at all.
+    const funding = new Transaction();
+    for (const { payer, amount } of payments) {
       const payerAccount = getAssociatedTokenAddressSync(mint.publicKey, payer.publicKey);
-      // Mint the payer exactly what they are about to send, then pay ana.
-      const transaction = new Transaction().add(
+      // The client also gets a spare balance, to pay invoices during the demo.
+      const extra = payer === acme ? parseUnits("20000", DECIMALS) : 0n;
+      funding.add(
         createAssociatedTokenAccountIdempotentInstruction(funder.publicKey, payerAccount, payer.publicKey, mint.publicKey),
-        createMintToInstruction(mint.publicKey, payerAccount, funder.publicKey, amountRaw),
+        createMintToInstruction(mint.publicKey, payerAccount, funder.publicKey, parseUnits(amount, DECIMALS) + extra),
+      );
+    }
+    await sendTransaction(connection, funding, [funder]);
+    console.log("Gave the payers their test tokens.");
+
+    // Then the payments themselves, one transaction each.
+    for (const { payer, amount, memo } of payments) {
+      const transaction = new Transaction().add(
         ...buildPaymentInstructions({
           payer: payer.publicKey.toBase58(),
           recipient: ana.publicKey.toBase58(),
           mint: mint.publicKey.toBase58(),
           decimals: DECIMALS,
-          amountRaw,
+          amountRaw: parseUnits(amount, DECIMALS),
           memo,
         }),
       );
+      // The funder pays the network fee; the payer signs the transfer and the memo.
       const signers = payer === funder ? [funder] : [funder, payer];
       const signature = await sendTransaction(connection, transaction, signers);
       console.log(`Paid ${amount.padStart(5)} to ana  ${signature}`);
     }
-    // A spare balance for the client, to pay invoices during the demo.
-    const acmeAccount = getAssociatedTokenAddressSync(mint.publicKey, acme.publicKey);
-    await sendTransaction(
-      connection,
-      new Transaction().add(
-        createMintToInstruction(mint.publicKey, acmeAccount, funder.publicKey, parseUnits("20000", DECIMALS)),
-      ),
-      [funder],
-    );
     fs.writeFileSync(marker, JSON.stringify({ at: new Date().toISOString() }));
   }
 

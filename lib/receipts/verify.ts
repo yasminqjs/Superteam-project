@@ -1,4 +1,5 @@
 import type { Connection } from "@solana/web3.js";
+import bs58 from "bs58";
 import { formatUnits } from "@/lib/money/units";
 import { canonicalize, sha256Hex } from "@/lib/receipts/canonical";
 import { describeReceiptProblem, type ReceiptDocument } from "@/lib/receipts/document";
@@ -33,14 +34,49 @@ export interface VerificationResult {
   checks: VerificationCheck[];
 }
 
+/**
+ * The RPC node could not be reached or kept failing. This is NOT a verdict
+ * about the receipt: callers must show it as a network problem, never as a
+ * mismatch.
+ */
+export class RpcUnavailableError extends Error {}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** A transaction signature is 64 bytes in base58. Anything else cannot exist onchain. */
+function isSignature(text: string): boolean {
+  try {
+    return bs58.decode(text).length === 64;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Reads one transaction. Returns null when the node says it does not exist;
+ * throws RpcUnavailableError when the node cannot be asked (rate limit,
+ * network down), after a few attempts.
+ */
 async function fetchTransaction(
   connection: Connection,
   signature: string,
+  retryDelayMs: number,
 ): Promise<ParsedTransactionLike | null> {
-  return connection.getParsedTransaction(signature, {
-    commitment: "confirmed",
-    maxSupportedTransactionVersion: 0,
-  });
+  if (!isSignature(signature)) return null;
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await sleep(retryDelayMs * attempt);
+    try {
+      return await connection.getParsedTransaction(signature, {
+        commitment: "confirmed",
+        maxSupportedTransactionVersion: 0,
+      });
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  const reason = lastError instanceof Error ? lastError.message : String(lastError);
+  throw new RpcUnavailableError(`The Solana RPC is not answering (${reason.slice(0, 160)})`);
 }
 
 export async function verifyReceipt(input: {
@@ -50,7 +86,10 @@ export async function verifyReceipt(input: {
   connection: Connection;
   /** The network this verifier is connected to: "solana:devnet" or "recebi:mock". */
   network: string;
+  /** Base wait between attempts when the RPC fails. Tests set it to 0. */
+  retryDelayMs?: number;
 }): Promise<VerificationResult> {
+  const retryDelayMs = input.retryDelayMs ?? 1000;
   const checks: VerificationCheck[] = [];
   const add = (id: VerificationCheck["id"], label: string, ok: boolean, detail: string) => {
     checks.push({ id, label, ok, detail });
@@ -94,12 +133,7 @@ export async function verifyReceipt(input: {
   }
 
   // 2. The seal: a memo transaction signed by the recipient.
-  let seal: ParsedTransactionLike | null = null;
-  try {
-    seal = await fetchTransaction(input.connection, input.sealSignature.trim());
-  } catch {
-    // An unreadable signature is reported the same way as a missing one.
-  }
+  const seal = await fetchTransaction(input.connection, input.sealSignature.trim(), retryDelayMs);
   const sealOk = Boolean(seal?.meta && !seal.meta.err);
   add(
     "seal_found",
@@ -128,12 +162,7 @@ export async function verifyReceipt(input: {
   }
 
   // 3. The payment the receipt is about.
-  let payment: ParsedTransactionLike | null = null;
-  try {
-    payment = await fetchTransaction(input.connection, receipt.payment_tx);
-  } catch {
-    // Same as above.
-  }
+  const payment = await fetchTransaction(input.connection, receipt.payment_tx, retryDelayMs);
   const paymentOk = Boolean(payment?.meta && !payment.meta.err);
   add(
     "payment_found",

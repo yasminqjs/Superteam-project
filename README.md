@@ -199,7 +199,8 @@ proves nothing to a third party.**
 
 ## Run it locally
 
-Requirements: Node.js 20 or newer.
+Requirements: Node.js 20 or newer. A step-by-step guide in Portuguese, with a click-by-click
+demo script and troubleshooting, is in [COMO-USAR.md](COMO-USAR.md).
 
 ### The fast way: mock mode, no setup
 
@@ -251,6 +252,9 @@ from the database, only the server can, with the `service_role` key.
 |---|---|
 | `npm test` | Unit tests: transfer extraction on real devnet transactions, canonical JSON and hashing, PTAX rules, and the whole product flow on the mock node |
 | `npm run smoke:mock` | Walks every API route over HTTP against a running mock-mode server |
+| `npm run e2e:live` | The whole live flow through the API of a running live-mode server, after `seed:demo`: imports real devnet payments into Supabase, pays an invoice and seals a receipt on devnet, verifies it, then deletes what it wrote |
+| `npm run smoke:live` | Walks the API of a running live-mode server with a throwaway wallet: signed-message login, Supabase persistence, real PTAX, invoices, CSV and PDF. Deletes what it created |
+| `npm run check:supabase` | Tests a real Supabase project through the app's own database code: connection, tables and every operation, using throwaway rows that it deletes afterwards |
 | `npm run check:live` | Reads the real PTAX API and scans a real devnet wallet. After `seed:demo`, it also seals a receipt and pays an invoice on devnet and verifies both |
 | `npm run lint`, `npm run typecheck`, `npm run build` | ESLint, TypeScript, production build |
 

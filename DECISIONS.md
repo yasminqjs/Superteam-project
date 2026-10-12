@@ -107,6 +107,19 @@ sign. `confirm` runs the public `verifyReceipt` on the server and only then
 stores the signature, so the database cannot hold a seal that fails
 verification. A sealed receipt is immutable.
 
+**A network failure is never a verdict.** If the RPC cannot be reached or
+rate-limits us, `verifyReceipt` retries and then throws `RpcUnavailableError`;
+it does not report "transaction not found". The verify page shows that as a
+network problem. Found while testing on the public devnet RPC, where a rate
+limit made a valid receipt look like a Mismatch.
+
+**The payer can be unknown.** If no wallet's balance of the mint went down in
+the transaction (for example, the sender was minted the tokens in that same
+transaction), the payment is imported with `payer_wallet` empty and cannot be
+linked to a contact. Our first demo seed did exactly that by accident; it now
+funds the payers in a separate transaction. A sender who swaps and pays in one
+transaction would hit the same limit: a known gap.
+
 **The receipt does not carry token decimals.** Verification takes them from the
 payment transaction itself and compares the formatted amount with the receipt.
 

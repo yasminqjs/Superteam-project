@@ -4,10 +4,11 @@
 // Always:   reads the real PTAX rate from the Central Bank, and scans a real
 //           devnet wallet for incoming stablecoin payments.
 // If `npm run seed:demo` has been run: also seals a receipt and pays an
-//           invoice ON DEVNET with the demo keys, and verifies both.
+//           invoice ON DEVNET with the demo keys, and verifies both. The
+//           invoice goes to a throwaway wallet, so ana's history stays clean.
 //
 // Uses an in-memory database, so it never touches your Supabase project.
-import { Connection, Transaction } from "@solana/web3.js";
+import { Connection, Keypair, Transaction } from "@solana/web3.js";
 import { devnetConnection, hasKeypair, loadEnv, loadOrCreateKeypair } from "./lib/devnet";
 
 // A devnet wallet that receives USDC all the time, for the read-only scan.
@@ -119,7 +120,10 @@ async function main() {
   });
   check("a tampered amount is a mismatch", !tampered.verified, tampered.checks.filter((c) => !c.ok).map((c) => c.id).join(","));
 
-  const invoice = await invoices.createInvoice(deps, owner, {
+  // The invoice is issued by a throwaway wallet, so this test payment never
+  // shows up in ana's history and the demo data stays clean.
+  const issuer = Keypair.generate().publicKey.toBase58();
+  const invoice = await invoices.createInvoice(deps, issuer, {
     client_name: "Acme Labs",
     description: "Live check invoice",
     amount: "12.5",
@@ -130,7 +134,7 @@ async function main() {
     transaction: new Transaction().add(
       ...buildPaymentInstructions({
         payer: acme.publicKey.toBase58(),
-        recipient: owner,
+        recipient: issuer,
         mint: invoice.mint,
         decimals: invoice.decimals,
         amountRaw: BigInt(invoice.amount_raw),
@@ -148,7 +152,7 @@ async function main() {
     status = await invoices.checkInvoicePayment(deps, invoice.id);
   }
   check("invoice detected as paid through its reference key", status.status === "paid" && status.paid_signature === paySignature);
-  const invoiceReceipt = (await receipts.listReceiptViews(deps, owner)).find((r) => r.tx_signature === paySignature);
+  const invoiceReceipt = (await receipts.listReceiptViews(deps, issuer)).find((r) => r.tx_signature === paySignature);
   check("the invoice payment became a classified receipt", invoiceReceipt?.category === "service" && invoiceReceipt.invoice_number === invoice.number);
 }
 

@@ -71,6 +71,19 @@ describe("extractIncomingTransfer, on real devnet transactions", () => {
     }
   });
 
+  it("reports no payer when nobody's balance went down", () => {
+    // E.g. the sender was minted the tokens in the same transaction, so they
+    // end where they started. The payment is still imported, with payer unknown.
+    const tx = fixture("devnet-transfer-with-memo");
+    const sender = tx.meta!.postTokenBalances!.find(
+      (balance) => balance.owner === "8sh86hmWL4ka7U44dFn3U72ZagLsAME4iRMwajfgR8QT",
+    )!;
+    sender.uiTokenAmount.amount = "9251000"; // same as before the transfer
+    const transfer = extractIncomingTransfer(tx, "75AjMdh7Gn1TLigfze541AVJGJ4TyqBEaRZk3pozfBza", USDC);
+    expect(transfer?.amountRaw).toBe(1000n);
+    expect(transfer?.payerWallet).toBeNull();
+  });
+
   it("ignores failed transactions", () => {
     const tx = fixture("devnet-transfer-with-memo");
     tx.meta!.err = { InstructionError: [2, { Custom: 1 }] };
