@@ -78,6 +78,14 @@ screen depends on the wallet, which only exists in the browser.
 5-minute, `httpOnly` challenge cookie; the session is a 7-day signed cookie.
 Trade-off: a session cannot be revoked before it expires. Fine for an MVP.
 
+**The login message is plain text, deliberately not "Sign-In with Solana".**
+Phantom recognises SIWS messages by their first line and validates them
+strictly (format, domain, URI) before prompting; our first version looked like
+one without being one, and Phantom refused it with "cannot be shown due to
+invalid formatting". A plain message is just displayed. Adopting real SIWS
+(the wallet checks the domain, which helps against phishing) is a possible
+next step, once it can be tested against the wallets we care about.
+
 **We send transactions ourselves.** The wallet only signs (`signTransaction`);
 the app sends through its own RPC and confirms by polling
 `getSignatureStatuses`. A transaction can therefore only reach the network the

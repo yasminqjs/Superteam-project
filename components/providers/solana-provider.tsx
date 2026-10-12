@@ -22,8 +22,12 @@ const STORAGE_KEY = IS_MOCK ? "recebiMockWallet" : "recebiWallet";
 // whenever this object's identity changes.
 const CONNECTION_CONFIG: ConnectionConfig = { commitment: "confirmed" };
 
+// A warning, not console.error: wallet errors are expected events (the user
+// dismissed a request, the wallet refused a message) and the screen that asked
+// already shows them. console.error would also pop up Next.js's error overlay
+// in development for something that is not a bug.
 function logWalletError(error: WalletError) {
-  console.error(`[wallet] ${error.name}: ${error.message}`);
+  console.warn(`[wallet] ${error.name}: ${error.message}`);
 }
 
 /** Gives every client component access to the RPC connection and the user's wallet. */

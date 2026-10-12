@@ -249,6 +249,7 @@ As diferenças no modo live:
 | `RPC is not devnet` no cartão da carteira | `NEXT_PUBLIC_RPC_URL` aponta para outra rede. Use uma URL de devnet |
 | `The Solana RPC keeps rate-limiting us` ou erro 429 | Limite da RPC pública. Configure a chave da Helius (seção 4.2) |
 | "Import from wallet" não acha nada no modo live | Faltou copiar a linha `NEXT_PUBLIC_STABLE_MINTS` do `seed:demo`, ou a Phantom está com outra carteira |
+| Ao fazer login, a Phantom não abre e aparece `cannot be shown due to invalid formatting` | Era um erro na mensagem de login, já corrigido. Atualize o projeto (`git pull`), reinicie o servidor e recarregue a página |
 | A Phantom não mostra os tokens ou a transação falha | A Phantom não está em Testnet Mode com Solana Devnet |
 | O airdrop do `seed:demo` falhou | Use https://faucet.solana.com com o endereço que o script mostrou e rode de novo |
 | `No BRL value yet` | A cotação não pôde ser lida. Abra o recebimento e clique em **Refresh rate** |
