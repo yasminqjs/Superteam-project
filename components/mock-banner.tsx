@@ -2,6 +2,7 @@
 
 import { useState, useSyncExternalStore } from "react";
 import { api } from "@/lib/api-client";
+import { MOCK_STATE_IN_COOKIES } from "@/lib/mock/backend";
 import { MOCK_IDENTITIES, currentMockIdentity, setMockIdentity } from "@/lib/mock/identity";
 import { IS_MOCK } from "@/lib/mode";
 
@@ -52,6 +53,7 @@ export function MockBanner() {
           <span className="text-paper/70">
             {" "}
             · simulated ledger, demo wallet and sample exchange rates. Nothing here is onchain.
+            {MOCK_STATE_IN_COOKIES && " Your sandbox is saved in this browser, so its links open only here."}
           </span>
         </p>
         <label className="flex items-center gap-2">

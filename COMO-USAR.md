@@ -275,6 +275,7 @@ Membros não precisam de SOL nem de tokens: eles só assinam a mensagem de login
 | `npm.cmd run check:live` | Testa a parte de Solana e PTAX do modo live, sem navegador e sem banco |
 | `npm.cmd run e2e:live` | Teste completo do modo live pela API: Supabase, PTAX e devnet. Precisa do site rodando com `dev:live` em outro terminal |
 | `npm.cmd run build` | Gera o build de produção (o mesmo que a Vercel roda) |
+| `$env:RECEBI_MOCK_STATE="cookie"; npm.cmd run dev:mock` | Roda o modo mock como na Vercel, com os dados nos cookies do navegador. Feche o terminal depois, para a variável não ficar ligada |
 | `npm.cmd run lint` e `npm.cmd run typecheck` | Conferem estilo e tipos |
 
 ## 7. Problemas comuns
@@ -332,12 +333,62 @@ passo está na seção 4.8.
 Se algo falhar no modo live com a Phantom, rode `npm.cmd run e2e:live`. Se ele passar, banco,
 Solana e PTAX estão certos e o problema está na carteira (rede errada, conta errada, sem SOL).
 
-## 9. Publicar na Vercel (ainda não feito)
+## 9. Publicar na Vercel
+
+Dá para publicar dos dois jeitos a partir do mesmo repositório. Para ter os dois no ar, crie
+**dois projetos** na Vercel apontando para o mesmo repositório: um sem variáveis (demonstração)
+e outro com as variáveis do modo live.
+
+### 9.1 Modo mock: demonstração, sem configurar nada
 
 1. Em https://vercel.com, **Add New > Project** e importe o repositório do GitHub.
-2. Em **Environment Variables**, coloque as mesmas variáveis do `.env.local` do modo live, com
-   duas diferenças: `NEXT_PUBLIC_APP_URL` com o endereço do site publicado, e
-   `NEXT_PUBLIC_STABLE_MINTS` **sem** as aspas simples em volta.
-3. **Deploy**. Depois, abra o site e repita o roteiro da seção 3.
+2. Não preencha nenhuma variável. Clique em **Deploy**.
 
-Use o modo live na Vercel. O modo mock guarda os dados em arquivo local e não funciona lá.
+Pronto. Sem variável de modo, na Vercel o Recebi sobe como demonstração, com a faixa preta
+"Mock mode" no topo. Qualquer pessoa abre o endereço, clica em **Use demo wallet** e percorre o
+produto inteiro, sem Phantom e sem banco. Se preferir deixar explícito, crie a variável
+`NEXT_PUBLIC_RECEBI_MODE` com o valor `mock`.
+
+Como funciona lá: a Vercel não guarda memória nem arquivo entre uma requisição e outra, então
+os dados da demonstração viajam nos **cookies do navegador** de cada visitante. Cada visitante
+tem a sua própria caixa de areia e ninguém vê os dados de ninguém.
+
+Limites que isso traz:
+
+- Um link de invoice ou de verificação só abre **no mesmo navegador** em que foi criado. Em
+  janela anônima ou em outro computador ele não é encontrado. A faixa preta avisa isso.
+- Cabe uma sessão de demonstração folgada (o roteiro completo usa cerca de metade do espaço).
+  Se encher, aparece "This demo sandbox is full": clique em **Reset demo data**.
+- É simulação. **Não usem esse endereço como "o app" da submissão nem gravem os vídeos nele.**
+  Ele serve para alguém experimentar o fluxo; o que demonstra Solana é o modo live.
+
+### 9.2 Modo live: o produto, na devnet
+
+1. **Add New > Project**, importe o repositório.
+2. Em **Environment Variables**, antes do deploy:
+
+   | Variável | Valor |
+   |---|---|
+   | `NEXT_PUBLIC_RECEBI_MODE` | `live` |
+   | `SUPABASE_URL` | A Project URL do Supabase |
+   | `SUPABASE_SERVICE_ROLE_KEY` | A chave service_role (secret). Nunca em print ou chat |
+   | `SESSION_SECRET` | 32 ou mais caracteres aleatórios (o comando está no `.env.example`) |
+   | `NEXT_PUBLIC_STABLE_MINTS` | A mesma linha do `.env.local`, **sem** as aspas simples em volta |
+   | `NEXT_PUBLIC_RPC_URL` | URL de devnet com chave (Helius). Opcional, mas a RPC pública limita muito |
+
+3. **Deploy**. Abra o site, conecte a Phantom (em Testnet Mode, Solana Devnet) e repita o
+   roteiro da seção 3.
+
+Dois detalhes:
+
+- As variáveis `NEXT_PUBLIC_*` entram no site na hora do build. Depois de mudar qualquer uma,
+  faça **Redeploy**.
+- Se o site abrir com a faixa "Mock mode", faltou a variável `NEXT_PUBLIC_RECEBI_MODE=live`.
+
+### 9.3 Conferir antes de publicar
+
+```powershell
+npm.cmd run build
+```
+
+É o mesmo build que a Vercel roda. Se passar aqui, passa lá.

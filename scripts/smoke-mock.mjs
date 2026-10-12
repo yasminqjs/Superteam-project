@@ -23,16 +23,19 @@ function check(label, condition, detail = "") {
   console.log(`${condition ? "ok  " : "FAIL"} ${label}${detail ? `  (${detail})` : ""}`);
 }
 
-async function call(method, path, body, { auth = true } = {}) {
+async function call(method, path, body, { auth = true, raw = false } = {}) {
   const headers = {};
   if (body !== undefined) headers["Content-Type"] = "application/json";
-  if (auth && cookies.size > 0) {
-    headers.Cookie = [...cookies].map(([name, value]) => `${name}=${value}`).join("; ");
-  }
+  // Without "auth" the session is left out, as for a visitor who is not signed
+  // in. The mock world itself still goes along when the server keeps it in
+  // cookies (RECEBI_MOCK_STATE=cookie): it is that visitor's database.
+  const sent = [...cookies].filter(([name]) => auth || name.startsWith("recebi_mock"));
+  if (sent.length > 0) headers.Cookie = sent.map(([name, value]) => `${name}=${value}`).join("; ");
   const response = await fetch(`${BASE}${path}`, {
     method,
     headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
+    // "raw": the body is already JSON text (the Solana client serialises its own).
+    body: body === undefined ? undefined : raw ? body : JSON.stringify(body),
   });
   for (const cookie of response.headers.getSetCookie()) {
     const [pair] = cookie.split(";");
@@ -96,7 +99,13 @@ const draft = await json("POST", `/api/receipts/${acme.id}/seal`);
 check("seal draft has a 64-hex hash", /^[0-9a-f]{64}$/.test(draft.body.receipt_hash ?? ""), JSON.stringify(draft.body).slice(0, 120));
 check("memo follows recebi:v1:<hash>:<payment_tx>", draft.body.memo === `recebi:v1:${draft.body.receipt_hash}:${acme.tx_signature}`);
 
-const connection = new Connection(`${BASE}/api/mock/rpc`, "confirmed");
+// The node is spoken to through the same cookie jar, as a browser would: when
+// the server keeps the mock world in cookies, a transaction sent without them
+// would land in somebody else's (brand new) world.
+const connection = new Connection(`${BASE}/api/mock/rpc`, {
+  commitment: "confirmed",
+  fetch: (url, init) => call(init?.method ?? "POST", String(url).slice(BASE.length), init?.body, { raw: true }),
+});
 const memoTx = new Transaction().add(
   new TransactionInstruction({
     programId: MEMO_PROGRAM,
@@ -236,6 +245,12 @@ check("the audit trail says who did what", trail.some((e) => e.actor_name === "B
 // --- Logout -----------------------------------------------------------------
 await json("POST", "/api/auth/logout");
 check("logout ends the session", (await json("GET", "/api/receipts")).status === 401);
+
+// When the server keeps the mock world in cookies, say how much of the room it used.
+const worldSize = [...cookies]
+  .filter(([name]) => name.startsWith("recebi_mock_"))
+  .reduce((sum, [, value]) => sum + value.length, 0);
+if (worldSize > 0) console.log(`\nMock world carried in cookies: ${worldSize} of 11000 characters.`);
 
 console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) FAILED.`);
 process.exit(failures === 0 ? 0 : 1);

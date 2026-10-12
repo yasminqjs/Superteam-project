@@ -67,6 +67,25 @@ notice, and user-facing sentences say "the mock ledger (not Solana)". Mock
 routes answer 404 in live mode. The demo keys are derived from public labels
 and are only ever registered in mock mode.
 
+**On a serverless host, the mock world travels in the visitor's cookies.** Mock
+mode kept its ledger and database in memory, mirrored to a local file. Vercel
+shares neither between two requests, so there the same states are packed
+(JSON, Brotli, base64url), cut into cookie-sized chunks and sent back whenever
+a request changes them (`lib/mock/cookie-state.ts`). Each request runs against
+its own copy through `AsyncLocalStorage`, so two visitors on one machine never
+meet. We chose this over an external key-value store because the point of mock
+mode is to need nothing: no account, no keys, one click. The costs are stated
+where the user sees them: a link opens only in the browser that created it,
+and a world that would exceed Vercel's 16 KB cookie header is refused with a
+message instead of being saved half-way. A full demo session uses about half
+of the 11,000 characters we allow.
+
+**Deployed to Vercel with no mode set, the app is the sandbox.** A live site
+with no database behind it fails on the first click; a sandbox with a banner
+saying it is a sandbox does not. `next.config.ts` makes that choice only when
+`NEXT_PUBLIC_RECEBI_MODE` is unset on Vercel. Everywhere else an unset mode
+still means live.
+
 ## Phases 1 to 5
 
 **Use cases live in `lib/services/` and receive their dependencies.** Each takes

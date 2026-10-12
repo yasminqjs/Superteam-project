@@ -232,6 +232,11 @@ It replaces the three external systems, and nothing else:
 - Phantom becomes a built-in demo wallet;
 - Supabase becomes a local JSON file, and PTAX becomes synthetic rates.
 
+On a serverless host there is no shared memory or disk between two requests, so there the
+mock world (ledger and database) travels in the visitor's own cookies, compressed. Each visitor
+gets a private sandbox, and a link to a receipt or invoice opens only in the browser that
+created it.
+
 Import, hashing, sealing and verification run the same code as in live mode. Mock mode is for
 development and rehearsal: every page shows a "Mock mode" banner, and its receipts say
 `"network": "recebi:mock"`, which the verifier refuses outside mock mode. **A mock "Verified"
@@ -298,6 +303,27 @@ from the database, only the server can, with the `service_role` key.
 | `npm run check:supabase` | Tests a real Supabase project through the app's own database code: connection, tables and every operation, using throwaway rows that it deletes afterwards |
 | `npm run check:live` | Reads the real PTAX API and scans a real devnet wallet. After `seed:demo`, it also seals a receipt and pays an invoice on devnet and verifies both |
 | `npm run lint`, `npm run typecheck`, `npm run build` | ESLint, TypeScript, production build |
+
+## Deploy on Vercel
+
+The same repository deploys two ways. For both at once, create two Vercel projects from it.
+
+**Sandbox, no configuration.** Import the repository and click Deploy, with no environment
+variables. On Vercel, an unset `NEXT_PUBLIC_RECEBI_MODE` means mock mode: anyone can open the
+site, click **Use demo wallet** and walk through the product without a wallet extension or a
+database. The "Mock mode" banner is always on screen and nothing there is onchain.
+
+**The product, on devnet.** Set these before deploying:
+
+| Variable | Value |
+|---|---|
+| `NEXT_PUBLIC_RECEBI_MODE` | `live` |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | From Supabase > Project Settings > API |
+| `SESSION_SECRET` | 32+ random characters |
+| `NEXT_PUBLIC_STABLE_MINTS` | The JSON from `.env.local`, without the surrounding single quotes |
+| `NEXT_PUBLIC_RPC_URL` | A devnet RPC URL with a key. Optional but recommended |
+
+`NEXT_PUBLIC_*` values are compiled into the site, so redeploy after changing one.
 
 ## Roadmap
 
