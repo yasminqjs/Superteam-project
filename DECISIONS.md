@@ -200,6 +200,30 @@ the tables at once.
 company wallet), Bia (Finance) and Caio (Read-only) from the mock banner, so
 one browser can show a company from all three sides.
 
+## Colour
+
+**Each hue has one job.** The first version had a single accent, the green of
+the Verified seal. The product is now about two worlds meeting, so the palette
+names them: Solana purple (`#9945FF`) for whatever lives onchain (seals,
+transactions, wallet actions) and Pix teal (`#32BCAD`) for whatever is in reais
+(BRL values, the PTAX rate, cash-out). Green still means "checked and fine"
+and red still means Mismatch. The brand gradient runs from Solana's purple and
+green to Pix's teal and is used for the mark, the strip above the header and
+the progress of sealed receipts.
+
+**Bright brand colours are fills; text uses darker "-ink" variants.** Solana
+green and Pix teal are too light to read on paper. `solana-ink` and `pix-ink`
+keep the hue and pass WCAG AA on the page background. Gradient lettering is
+limited to the display headline, where large text needs only 3:1.
+
+**Mock mode stays colourless where it would lie.** The network badge is purple
+only in live mode. The mock ledger is not Solana and its badge is grey.
+
+**The dashboard's bars are geometry, the numbers are not.** Income by month is
+summed on the server with the same decimal arithmetic as the reports
+(`history` in the monthly report). The browser turns those strings into bar
+widths with ordinary floats and prints the strings themselves.
+
 ## Dependencies
 
 **Known `npm audit` findings, left as they are.** All of them come from

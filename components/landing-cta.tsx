@@ -54,7 +54,7 @@ export function LandingCta() {
         )}
         <Link
           href={SAMPLE_RECEIPT_ID ? `/verify/${SAMPLE_RECEIPT_ID}` : "/verify"}
-          className="text-sm text-accent underline-offset-4 hover:underline"
+          className="text-sm text-solana-ink underline-offset-4 hover:underline"
         >
           {SAMPLE_RECEIPT_ID ? "See a verified receipt →" : "Verify a receipt →"}
         </Link>

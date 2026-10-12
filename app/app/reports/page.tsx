@@ -162,7 +162,7 @@ export default function ReportsPage() {
                   type="checkbox"
                   checked={selected.has(receipt.id)}
                   onChange={() => toggle(receipt.id)}
-                  className="size-4 accent-[var(--color-accent)]"
+                  className="size-4 accent-[var(--color-solana)]"
                 />
                 <span className="hidden text-sm tabular-nums text-muted sm:block">{receipt.block_time_brt}</span>
                 <span className="min-w-0">

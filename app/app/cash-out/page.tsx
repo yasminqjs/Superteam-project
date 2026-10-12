@@ -107,7 +107,7 @@ export default function CashOutPage() {
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        <Card>
+        <Card bar="pix">
           <Eyebrow>Pix payout</Eyebrow>
           <form onSubmit={getQuote} className="mt-4 space-y-4">
             <div className="grid gap-4 sm:grid-cols-[1fr_11rem]">
@@ -160,7 +160,7 @@ export default function CashOutPage() {
           </form>
         </Card>
 
-        <Card>
+        <Card bar="pix">
           <Eyebrow>Quote</Eyebrow>
           {!quote ? (
             <p className="mt-4 text-sm text-muted">
@@ -168,7 +168,7 @@ export default function CashOutPage() {
             </p>
           ) : (
             <>
-              <p className="mt-3 text-4xl font-semibold tabular-nums">{formatBRL(quote.amount_brl)}</p>
+              <p className="mt-3 text-4xl font-semibold tabular-nums text-pix-ink">{formatBRL(quote.amount_brl)}</p>
               <p className="mt-1 text-sm text-muted">
                 for {quote.amount} {quote.symbol}
               </p>
@@ -178,6 +178,7 @@ export default function CashOutPage() {
                 <QuoteRow label="Effective rate" value={`R$ ${formatBrazilian(quote.effective_rate, 4)}`} />
               </dl>
               <Button
+                variant="pix"
                 className="mt-5"
                 onClick={requestPayout}
                 busy={busy === "payout"}

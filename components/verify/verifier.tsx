@@ -154,7 +154,7 @@ export function Verifier({
                 <p className="text-3xl font-semibold tabular-nums">
                   {receipt.amount} <span className="text-xl font-medium text-muted">{receipt.symbol}</span>
                 </p>
-                {receipt.amount_brl && <p className="text-xl tabular-nums">{formatBRL(receipt.amount_brl)}</p>}
+                {receipt.amount_brl && <p className="text-xl tabular-nums text-pix-ink">{formatBRL(receipt.amount_brl)}</p>}
               </div>
               {receipt.fx && <p className="mt-1 text-sm tabular-nums text-muted">{describeRate(receipt.fx)}</p>}
               <dl className="mt-5 grid gap-x-8 gap-y-3 border-t border-line pt-5 text-sm sm:grid-cols-2">

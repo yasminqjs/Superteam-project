@@ -226,7 +226,7 @@ export default function ReceiptPage() {
           </p>
           {receipt.amount_brl && receipt.fx ? (
             <>
-              <p className="mt-2 text-2xl tabular-nums">{formatBRL(receipt.amount_brl)}</p>
+              <p className="mt-2 text-2xl tabular-nums text-pix-ink">{formatBRL(receipt.amount_brl)}</p>
               <p className="mt-1 text-sm tabular-nums text-muted">{describeRate(receipt.fx)}</p>
             </>
           ) : (
@@ -237,7 +237,7 @@ export default function ReceiptPage() {
               type="button"
               onClick={refreshRate}
               disabled={refreshingRate}
-              className="mt-1 text-sm text-accent underline-offset-4 hover:underline disabled:opacity-60"
+              className="mt-1 text-sm text-pix-ink underline-offset-4 hover:underline disabled:opacity-60"
             >
               {refreshingRate ? "Reading the rate…" : "Refresh rate"}
             </button>
@@ -341,8 +341,9 @@ export default function ReceiptPage() {
 
       <section aria-label="Receipt" className="mt-6">
         {sealed ? (
-          <div className="rounded-lg border border-accent/40 bg-accent-soft p-5 sm:p-6">
-            <p className="font-display text-3xl text-accent">Sealed onchain ✓</p>
+          <div className="relative overflow-hidden rounded-lg border border-solana/30 bg-solana-soft p-5 sm:p-6">
+            <span aria-hidden className="absolute inset-x-0 top-0 h-1 bg-brand" />
+            <p className="font-display text-3xl text-solana-ink">Sealed onchain ✓</p>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-ink/80">
               The hash of this receipt is recorded on {LEDGER_NAME} in a transaction signed by your
               wallet. Anyone with the link can check it, without trusting Recebi.
@@ -356,7 +357,7 @@ export default function ReceiptPage() {
               </Row>
             </dl>
             <div className="mt-6 flex flex-wrap gap-3">
-              <ButtonLink href={`/verify/${id}`} variant="accent" target="_blank">
+              <ButtonLink href={`/verify/${id}`} variant="solana" target="_blank">
                 Open public verification
               </ButtonLink>
               <Button variant="secondary" onClick={copyVerifyLink}>
@@ -384,7 +385,7 @@ export default function ReceiptPage() {
               and can no longer be edited.
             </p>
             <div className="mt-5 flex flex-wrap items-center gap-4">
-              <Button variant="accent" onClick={seal} busy={sealStep !== null} disabled={!canSeal || !canOwner}>
+              <Button variant="solana" onClick={seal} busy={sealStep !== null} disabled={!canSeal || !canOwner}>
                 Seal onchain
               </Button>
               <span className="text-sm text-muted">

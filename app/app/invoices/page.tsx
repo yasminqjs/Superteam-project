@@ -70,14 +70,14 @@ export default function InvoicesPage() {
                   {invoice.amount} {invoice.symbol}
                 </span>
                 <span>
-                  {invoice.status === "paid" ? <Badge tone="accent">Paid ✓</Badge> : <Badge>Pending</Badge>}
+                  {invoice.status === "paid" ? <Badge tone="accent">Paid ✓</Badge> : <Badge tone="warn">Pending</Badge>}
                 </span>
                 <span className="flex gap-4 justify-self-end text-sm">
                   <a
                     href={`/pay/${invoice.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-accent underline-offset-4 hover:underline"
+                    className="text-solana-ink underline-offset-4 hover:underline"
                   >
                     Payment page
                   </a>

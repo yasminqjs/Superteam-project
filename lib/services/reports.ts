@@ -26,9 +26,24 @@ export interface MonthlyReport {
   total_brl: string;
   /** Transfers between the user's own wallets are not income. */
   total_brl_excluding_own: string;
+  /** Income (own transfers excluded) of the six months ending at `month`, oldest first. */
+  history: { month: string; income_brl: string }[];
+}
+
+const HISTORY_MONTHS = 6;
+
+/** The `count` months ending at `month`, oldest first: ("2026-02", 3) gives 2025-12, 2026-01, 2026-02. */
+export function monthsEndingAt(month: string, count: number): string[] {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const last = year * 12 + (monthNumber - 1);
+  return Array.from({ length: count }, (_, position) => {
+    const index = last - (count - 1 - position);
+    return `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, "0")}`;
+  });
 }
 
 const monthOf = (receipt: ReceiptView) => receipt.block_time_brt.slice(0, 7);
+const isIncome = (receipt: ReceiptView) => receipt.category !== "own_transfer";
 
 function sumBrl(receipts: ReceiptView[]): string {
   return receipts
@@ -72,7 +87,11 @@ export async function buildMonthlyReport(
     receipts,
     totals,
     total_brl: sumBrl(receipts),
-    total_brl_excluding_own: sumBrl(receipts.filter((r) => r.category !== "own_transfer")),
+    total_brl_excluding_own: sumBrl(receipts.filter(isIncome)),
+    history: monthsEndingAt(month, HISTORY_MONTHS).map((entry) => ({
+      month: entry,
+      income_brl: sumBrl(all.filter((receipt) => monthOf(receipt) === entry && isIncome(receipt))),
+    })),
   };
 }
 

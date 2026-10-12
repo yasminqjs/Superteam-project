@@ -197,17 +197,17 @@ export default function PayPage() {
                       client&apos;s wallet to pay it.
                     </Notice>
                   ) : publicKey ? (
-                    <Button className="w-full" onClick={payWithWallet} busy={paying === "wallet"}>
+                    <Button variant="solana" className="w-full" onClick={payWithWallet} busy={paying === "wallet"}>
                       Pay with browser wallet
                     </Button>
                   ) : (
-                    <Button className="w-full" onClick={connectWallet} busy={connecting}>
+                    <Button variant="solana" className="w-full" onClick={connectWallet} busy={connecting}>
                       Connect a wallet to pay
                     </Button>
                   )}
                   {payError && <Notice>{payError}</Notice>}
                   <p role="status" className="flex items-center justify-center gap-2 text-sm text-muted">
-                    <span aria-hidden className="size-2 animate-pulse rounded-full bg-accent" />
+                    <span aria-hidden className="size-2 animate-pulse rounded-full bg-solana" />
                     Waiting for payment…
                   </p>
                 </div>
