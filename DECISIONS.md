@@ -221,12 +221,12 @@ one browser can show a company from all three sides.
 
 ## Look
 
-**One accent, on newsprint.** On 12 October we tried a colour system built on
+**One accent, on off-white.** On 12 October we tried a colour system built on
 Solana's purple and Pix's teal, with a busier dashboard, and went back the same
 day: the team preferred the first look, where the green of the Verified seal is
-the only colour and stays the loudest thing on any screen. The one change kept
-is the paper, now the cream of an old newspaper (`#f3ead7`), with rules in a
-darker shade of the same cream so they stay visible on it.
+the only colour and stays the loudest thing on any screen. We also tried a
+newsprint cream for the page and settled on a warm off-white (`#f8f6f1`), a
+shade away from the white of the cards.
 
 ## Dependencies
 

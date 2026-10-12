@@ -5,15 +5,15 @@
  * sparingly so the seal stays the loudest thing on any screen. Buttons and
  * text are ink; red is reserved for Mismatch and errors.
  *
- * The page is the cream of old newsprint, and cards are white sheets laid on
- * it. Rules are a darker shade of the same cream, so they stay visible.
+ * The page is a warm off-white, a shade away from the white of the cards, so
+ * a card reads as a sheet laid on the page.
  */
 @theme inline {
-  --color-paper: #f3ead7;
+  --color-paper: #f8f6f1;
   --color-surface: #ffffff;
   --color-ink: #14171a;
   --color-muted: #63696e;
-  --color-line: #dcd1b9;
+  --color-line: #e2dfd8;
   --color-accent: #0b6b4d;
   --color-accent-soft: #e3f1eb;
   --color-danger: #b3261e;
