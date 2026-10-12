@@ -233,7 +233,7 @@ export default function TeamPage() {
                     <AddressText address={team.account} chars={6} />
                   </span>
                 </span>
-                <Badge tone="solana">{ROLE_LABELS.owner}</Badge>
+                <Badge tone="accent">{ROLE_LABELS.owner}</Badge>
               </li>
               {team.members.map((member) => (
                 <li

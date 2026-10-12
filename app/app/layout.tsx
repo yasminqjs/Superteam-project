@@ -43,7 +43,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 aria-current={isActive(pathname, item.href) ? "page" : undefined}
                 className={`whitespace-nowrap border-b-2 py-3 text-sm ${
                   isActive(pathname, item.href)
-                    ? "border-solana font-medium text-ink"
+                    ? "border-ink font-medium text-ink"
                     : "border-transparent text-muted hover:text-ink"
                 }`}
               >

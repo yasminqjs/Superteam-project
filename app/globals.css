@@ -1,37 +1,21 @@
 @import "tailwindcss";
 
 /*
- * Design tokens. Colour carries meaning, so each hue has one job:
+ * Design tokens. One accent colour (the green of the Verified seal), used
+ * sparingly so the seal stays the loudest thing on any screen. Buttons and
+ * text are ink; red is reserved for Mismatch and errors.
  *
- * - Solana purple: anything that lives onchain (seals, transactions, wallets).
- * - Pix teal: anything in reais (BRL values, the PTAX rate, cash-out).
- * - Green: checked and fine (Verified, Paid, Saved).
- * - Red: Mismatch and errors.
- * - The brand gradient runs from Solana's purple and green to Pix's teal,
- *   which is the product in one line: paid on Solana, accounted for in reais.
- *
- * The bright brand colours (solana, mint, pix) are for fills and marks. Text
- * on a light background uses the darker "-ink" variants, which pass WCAG AA.
+ * The page is the cream of old newsprint, and cards are white sheets laid on
+ * it. Rules are a darker shade of the same cream, so they stay visible.
  */
 @theme inline {
-  --color-paper: #faf9f6;
+  --color-paper: #f3ead7;
   --color-surface: #ffffff;
   --color-ink: #14171a;
   --color-muted: #63696e;
-  --color-line: #e2dfd8;
-
-  --color-solana: #9945ff;
-  --color-solana-ink: #6f2fd6;
-  --color-solana-soft: #f3ecff;
-  --color-mint: #14f195;
-  --color-pix: #32bcad;
-  --color-pix-ink: #0b7268;
-  --color-pix-soft: #e2f5f2;
-
+  --color-line: #dcd1b9;
   --color-accent: #0b6b4d;
   --color-accent-soft: #e3f1eb;
-  --color-warn: #8a5a00;
-  --color-warn-soft: #fdf3d7;
   --color-danger: #b3261e;
   --color-danger-soft: #fbe9e7;
 
@@ -40,34 +24,15 @@
   --font-display: var(--font-instrument-serif);
 }
 
-:root {
-  /* Solana purple, through its blue and green, to Pix teal. */
-  --gradient-brand: linear-gradient(90deg, #9945ff 0%, #5c8ee0 34%, #14f195 68%, #32bcad 100%);
-  /* The same journey in colours dark enough for large text on paper. */
-  --gradient-brand-ink: linear-gradient(90deg, #6f2fd6 0%, #3f63d2 40%, #0b8a67 78%, #0b7268 100%);
-}
-
-@utility bg-brand {
-  background-image: var(--gradient-brand);
-}
-
-/* Gradient lettering. For large display text only: mid-gradient contrast is about 4:1. */
-@utility text-brand {
-  background-image: var(--gradient-brand-ink);
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-}
-
 body {
   background: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
-/* Keyboard focus is always visible. */
+/* Keyboard focus is always visible, in the accent colour. */
 :focus-visible {
-  outline: 2px solid var(--color-solana);
+  outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
 
