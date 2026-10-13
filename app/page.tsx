@@ -13,7 +13,7 @@ const STEPS = [
   },
   {
     title: "Share",
-    body: "Your team works on one company account, each person with their own wallet and role. Your accountant or exchange checks any receipt on a public page, without trusting Recebi.",
+    body: "Your team works on one company account, each person with their own wallet and role. Your accountant or exchange checks any receipt on a public page, without trusting Yvex Chain.",
   },
 ];
 
@@ -29,7 +29,7 @@ export default function Home() {
             Invoice abroad. Get paid in stablecoins. Prove every payment.
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-muted">
-            Recebi is the receivables back office for Brazilian companies and freelancers who sell
+            Yvex Chain is the receivables back office for Brazilian companies and freelancers who sell
             services abroad. Each payment arrives tied to its invoice, valued in BRL at the Central
             Bank&apos;s official PTAX rate, and backed by a receipt anyone can verify onchain.
           </p>

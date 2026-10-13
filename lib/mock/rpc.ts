@@ -75,7 +75,7 @@ function call(method: string, params: unknown[]): unknown {
       return processTransaction(raw);
     }
     default:
-      throw new MockRpcError(-32601, `Method not found in the Recebi mock node: ${method}`);
+      throw new MockRpcError(-32601, `Method not found in the Yvex Chain mock node: ${method}`);
   }
 }
 

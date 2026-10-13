@@ -69,7 +69,7 @@ function absolute(url: string, appUrl: string): string {
 function Header({ title, lines }: { title: string; lines: string[] }) {
   return (
     <View>
-      <Text style={styles.brand}>Recebi</Text>
+      <Text style={styles.brand}>Yvex Chain</Text>
       <Text style={styles.title}>{title}</Text>
       <View style={styles.meta}>
         {lines.map((line) => (
@@ -115,7 +115,7 @@ function SummaryDocument({
   company: PdfCompany;
 }) {
   return (
-    <Document title={`Recebi summary ${report.month}`} author="Recebi">
+    <Document title={`Yvex Chain summary ${report.month}`} author="Yvex Chain">
       <Page size="A4" style={styles.page}>
         <Header
           title={`Monthly summary, ${report.month}`}
@@ -295,7 +295,7 @@ export async function renderDossierPdf(
     ),
   );
   return renderToBuffer(
-    <Document title="Recebi proof of origin" author="Recebi">
+    <Document title="Yvex Chain proof of origin" author="Yvex Chain">
       <Page size="A4" style={styles.page}>
         <Header
           title="Proof of origin"
@@ -303,7 +303,7 @@ export async function renderDossierPdf(
             ...companyLines(company),
             `Recipient wallet: ${wallet}`,
             `Network: ${NETWORK_LABEL}`,
-            "Each sealed receipt below can be checked by anyone, without trusting Recebi:",
+            "Each sealed receipt below can be checked by anyone, without trusting Yvex Chain:",
             "the page recomputes the receipt hash and reads both transactions from the chain.",
           ]}
         />

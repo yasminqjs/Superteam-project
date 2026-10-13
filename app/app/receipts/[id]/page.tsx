@@ -200,7 +200,7 @@ export default function ReceiptPage() {
     );
     const link = document.createElement("a");
     link.href = url;
-    link.download = `recebi-receipt-${id}.json`;
+    link.download = `yvex-chain-receipt-${id}.json`;
     link.click();
     URL.revokeObjectURL(url);
   }
@@ -345,7 +345,7 @@ export default function ReceiptPage() {
             <p className="font-display text-3xl text-accent">Sealed onchain ✓</p>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-ink/80">
               The hash of this receipt is recorded on {LEDGER_NAME} in a transaction signed by your
-              wallet. Anyone with the link can check it, without trusting Recebi.
+              wallet. Anyone with the link can check it, without trusting Yvex Chain.
             </p>
             <dl className="mt-5 space-y-3 text-sm">
               <Row label="Receipt hash">

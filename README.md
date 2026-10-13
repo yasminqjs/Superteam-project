@@ -1,4 +1,4 @@
-# Recebi
+# Yvex Chain
 
 **Stablecoin receivables for Brazilian companies, with proof.**
 
@@ -7,13 +7,13 @@ paid in stablecoins. The money arrives in seconds, but a wallet only shows anony
 transfers: no client, no invoice, no value in reais. And since 2026 the paperwork is theirs:
 whoever converts those stablecoins to reais has to be told who paid, for what, and why.
 
-Recebi is the receivables back office for that. A company invoices its client, the client pays
+Yvex Chain is the receivables back office for that. A company invoices its client, the client pays
 in stablecoins on Solana with the invoice's hash inside the payment, and every payment becomes
 a record the company's team, its accountant and its exchange can use: tied to its invoice,
 valued in BRL at the Central Bank's official PTAX rate, and backed by a receipt anyone can
 verify onchain.
 
-Recebi does not convert currency, custody funds or calculate taxes.
+Yvex Chain does not convert currency, custody funds or calculate taxes.
 
 > Built for Colosseum's Crypto World's Fair hackathon. **Devnet only.**
 
@@ -58,7 +58,7 @@ Recebi does not convert currency, custody funds or calculate taxes.
     wallet address, each with a role. Invoices then name the company inside the hashed
     document the payer commits to.
 
-> Tax rules may require a different rate date. Recebi stores the rate and the date used; your
+> Tax rules may require a different rate date. Yvex Chain stores the rate and the date used; your
 > accountant decides the rule.
 
 ## Company accounts
@@ -83,7 +83,7 @@ their own wallet and picks the company under "Switch account".
   reads well after someone leaves.
 - Sealing stays with the owner on purpose. A seal is only worth something because it is signed
   by the wallet that received the payment, so no role can do it on that wallet's behalf.
-- The company name and tax ID are declared by the company. Recebi does not verify them.
+- The company name and tax ID are declared by the company. Yvex Chain does not verify them.
 
 ## Architecture
 
@@ -129,7 +129,7 @@ supabase/       database schema
 test/           unit tests and real devnet fixtures
 ```
 
-## How Recebi uses Solana
+## How Yvex Chain uses Solana
 
 | Primitive | Use | Where |
 |---|---|---|
@@ -149,6 +149,9 @@ test/           unit tests and real devnet fixtures
 4. Approve. The page changes to **Paid** within a few seconds.
 
 ## The seal format (an open standard)
+
+The format is called `recebi` ("I received" in Portuguese), the project's working name. The
+code's identifiers and environment variables use it too.
 
 A sealed receipt is a memo transaction signed by the recipient, whose memo is exactly:
 
@@ -223,7 +226,7 @@ to write one.
 
 ### Mock mode
 
-Recebi also runs in a **mock mode** that needs no wallet extension, no database and no network.
+Yvex Chain also runs in a **mock mode** that needs no wallet extension, no database and no network.
 It replaces the three external systems, and nothing else:
 
 - the Solana RPC becomes a small in-memory node (`lib/mock/`) that accepts real signed

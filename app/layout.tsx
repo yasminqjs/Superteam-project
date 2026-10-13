@@ -23,7 +23,7 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Recebi: stablecoin receivables for Brazilian companies, with proof",
+  title: "Yvex Chain: stablecoin receivables for Brazilian companies, with proof",
   description:
     "The receivables back office for Brazilian companies and freelancers who sell services abroad. Each stablecoin payment arrives tied to its invoice, valued in BRL at the Central Bank's official PTAX rate, and backed by a receipt anyone can verify onchain.",
 };

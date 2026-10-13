@@ -67,7 +67,7 @@ export default function MockTransactionPage() {
       <main className="mx-auto w-full max-w-3xl flex-1 px-5 py-10 sm:px-8 sm:py-14">
         <h1 className="font-display text-4xl tracking-tight">Mock ledger transaction</h1>
         <p className="mt-2 text-sm text-muted">
-          This transaction exists only in Recebi&apos;s simulated ledger. It is not on Solana.
+          This transaction exists only in Yvex Chain&apos;s simulated ledger. It is not on Solana.
         </p>
 
         <div className="mt-8 space-y-6">

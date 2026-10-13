@@ -12,7 +12,7 @@ export const GET = route(async (request: Request) => {
   return new Response(buildCsv(report.receipts, requestOrigin(request)), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="recebi-${report.month}.csv"`,
+      "Content-Disposition": `attachment; filename="yvex-chain-${report.month}.csv"`,
     },
   });
 });

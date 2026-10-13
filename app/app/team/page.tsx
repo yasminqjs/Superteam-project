@@ -204,7 +204,7 @@ export default function TeamPage() {
             </Row>
           </dl>
           <p className="mt-3 text-xs leading-5 text-muted">
-            The name and tax ID are declared by the company. Recebi does not verify them.
+            The name and tax ID are declared by the company. Yvex Chain does not verify them.
           </p>
         </Card>
 

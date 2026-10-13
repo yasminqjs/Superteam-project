@@ -286,7 +286,7 @@ export function Verifier({
           Proves the payment happened onchain and that this receipt was sealed by the recipient and
           not altered since. Counterparty identity is declared by the recipient.
         </span>{" "}
-        The check runs in your browser, straight against a Solana RPC node: Recebi&apos;s database is
+        The check runs in your browser, straight against a Solana RPC node: Yvex Chain&apos;s database is
         not consulted.
         {IS_MOCK && (
           <span className="mt-2 block text-danger">

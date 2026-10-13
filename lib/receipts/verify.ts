@@ -125,7 +125,7 @@ export async function verifyReceipt(input: {
       "Receipt is well formed",
       receipt.network === input.network,
       receipt.network === input.network
-        ? `Recebi receipt v1 on ${receipt.network}`
+        ? `Yvex Chain receipt v1 on ${receipt.network}`
         : `This receipt is for ${receipt.network}, but this page checks ${input.network}`,
     )
   ) {

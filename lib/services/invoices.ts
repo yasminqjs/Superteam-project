@@ -101,7 +101,7 @@ export function toInvoiceView(invoice: Invoice): InvoiceView {
       decimals: invoice.decimals,
       amountRaw,
       reference: invoice.reference,
-      label: "Recebi",
+      label: "Yvex Chain",
       message: invoice.number,
       memo,
     }),

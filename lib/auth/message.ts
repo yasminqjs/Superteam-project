@@ -18,7 +18,7 @@ export function buildSignInMessage(input: {
   issuedAt: string;
 }): string {
   return [
-    "Recebi sign-in",
+    "Yvex Chain sign-in",
     "",
     "Sign this message to prove this wallet is yours.",
     "It is not a transaction and costs nothing.",

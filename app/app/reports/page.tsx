@@ -123,7 +123,7 @@ export default function ReportsPage() {
             </a>
           </div>
           <p className="mt-4 text-xs leading-5 text-muted">
-            Informational records only. Not tax advice. Recebi stores the rate and the date used;
+            Informational records only. Not tax advice. Yvex Chain stores the rate and the date used;
             your accountant decides the rule.
           </p>
         </Card>

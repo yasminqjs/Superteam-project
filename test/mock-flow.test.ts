@@ -219,7 +219,7 @@ describe("mock mode, end to end", () => {
     expect(invoice.status).toBe("pending");
     expect(invoice.solana_pay_url).toBe(
       `solana:${ANA}?amount=2500&spl-token=${MOCK_USDC.mint}&reference=${invoice.reference}` +
-        `&label=Recebi&message=INV-0001&memo=${encodeURIComponent(invoice.memo)}`,
+        `&label=Yvex%20Chain&message=INV-0001&memo=${encodeURIComponent(invoice.memo)}`,
     );
 
     const pay = (amount: string, memo: string) =>

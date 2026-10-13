@@ -84,7 +84,7 @@ export function WalletStatus() {
 
       {current?.status === "ready" && !current.rightNetwork && (
         <p className="mt-4 rounded-md bg-danger-soft px-3 py-2 text-sm text-danger">
-          NEXT_PUBLIC_RPC_URL points to another network. Recebi only works on devnet.
+          NEXT_PUBLIC_RPC_URL points to another network. Yvex Chain only works on devnet.
         </p>
       )}
       {current?.status === "error" && (

@@ -32,7 +32,7 @@ export const GET = route(async (request: Request) => {
   return new Response(new Uint8Array(pdf), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": 'inline; filename="recebi-proof-of-origin.pdf"',
+      "Content-Disposition": 'inline; filename="yvex-chain-proof-of-origin.pdf"',
     },
   });
 });

@@ -9,7 +9,7 @@ import { Transaction, type PublicKey, type VersionedTransaction } from "@solana/
 import nacl from "tweetnacl";
 import { currentMockIdentity } from "@/lib/mock/identity";
 
-export const MOCK_WALLET_NAME = "Recebi demo wallet" as WalletName<"Recebi demo wallet">;
+export const MOCK_WALLET_NAME = "Yvex Chain demo wallet" as WalletName<"Yvex Chain demo wallet">;
 
 const ICON =
   "data:image/svg+xml," +
@@ -27,7 +27,7 @@ const ICON =
  * and its key is public (see lib/mock/keys.ts), so it is only ever registered
  * in mock mode.
  */
-export class MockWalletAdapter extends BaseMessageSignerWalletAdapter<"Recebi demo wallet"> {
+export class MockWalletAdapter extends BaseMessageSignerWalletAdapter<"Yvex Chain demo wallet"> {
   name = MOCK_WALLET_NAME;
   url = "https://github.com/";
   icon = ICON;

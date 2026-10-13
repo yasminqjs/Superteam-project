@@ -18,7 +18,7 @@ export function assertDevnetCluster(value: string | undefined): void {
   const cluster = value?.trim() || CLUSTER;
   if (cluster !== CLUSTER) {
     throw new Error(
-      `NEXT_PUBLIC_SOLANA_CLUSTER is "${cluster}", but Recebi only runs on devnet`,
+      `NEXT_PUBLIC_SOLANA_CLUSTER is "${cluster}", but Yvex Chain only runs on devnet`,
     );
   }
 }
